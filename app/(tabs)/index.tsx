@@ -1,5 +1,6 @@
 import ProductCard from '@/components/ProductCard';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   RefreshControl,
@@ -73,6 +74,7 @@ const categories = [
 ];
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -94,12 +96,15 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+<View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hello 👋</Text>
           <Text style={styles.headerTitle}>Find Your Perfect Item</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={() => router.push('/notifications')}
+        >
           <Ionicons name="notifications-outline" size={24} color="#2D3436" />
           <View style={styles.notificationBadge}>
             <Text style={styles.badgeText}>3</Text>
