@@ -13,7 +13,6 @@ export default function WelcomeScreen() {
   const floatAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Start animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -33,7 +32,6 @@ export default function WelcomeScreen() {
       }),
     ]).start();
 
-    // Floating animation loop
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
@@ -51,7 +49,7 @@ export default function WelcomeScreen() {
   }, []);
 
   const handleGetStarted = () => {
-    router.push('/(tabs)');
+    router.push('/(auth)/register');
   };
 
   return (
@@ -140,6 +138,7 @@ export default function WelcomeScreen() {
 
         <TouchableOpacity 
           style={styles.secondaryButton}
+          onPress={() => router.push('/(auth)/login')}
           activeOpacity={0.7}
         >
           <Text style={styles.secondaryButtonText}>I have an account</Text>
