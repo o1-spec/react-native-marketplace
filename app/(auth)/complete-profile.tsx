@@ -1,18 +1,19 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function CompleteProfileScreen() {
@@ -21,9 +22,9 @@ export default function CompleteProfileScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const pickImage = async () => {
-    // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
@@ -31,7 +32,6 @@ export default function CompleteProfileScreen() {
       return;
     }
 
-    // Launch image picker
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -45,7 +45,6 @@ export default function CompleteProfileScreen() {
   };
 
   const takePhoto = async () => {
-    // Request permission
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     
     if (status !== 'granted') {
@@ -53,7 +52,6 @@ export default function CompleteProfileScreen() {
       return;
     }
 
-    // Launch camera
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1],
@@ -77,20 +75,29 @@ export default function CompleteProfileScreen() {
     );
   };
 
-const handleComplete = () => {
-  console.log('Complete profile:', {
-    profileImage,
-    phoneNumber,
-    location,
-    bio,
-  });
-  
-  router.replace('/(onboarding)');
-};
+  const handleComplete = async () => {
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    console.log('Complete profile:', {
+      profileImage,
+      phoneNumber,
+      location,
+      bio,
+    });
+    
+    setIsSubmitting(false);
+    router.replace('/(onboarding)');
+  };
 
-const handleSkip = () => {
-  router.replace('/(onboarding)');
-};
+  const handleSkip = () => {
+    router.replace('/(onboarding)');
+  };
+
+  // Check if form is valid
+  const isFormValid = phoneNumber.length >= 10 && location.length >= 3;
 
   return (
     <KeyboardAvoidingView
@@ -199,6 +206,7 @@ const handleSkip = () => {
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                maxLength={150}
               />
             </View>
             <Text style={styles.characterCount}>{bio.length}/150</Text>
@@ -226,15 +234,30 @@ const handleSkip = () => {
             </View>
           </View>
 
-          {/* Complete Button */}
-          <TouchableOpacity
-            style={styles.completeButton}
-            onPress={handleComplete}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.completeButtonText}>Complete Setup</Text>
-            <Ionicons name="checkmark-circle" size={20} color="#fff" />
-          </TouchableOpacity>
+          {/* Animated Buttons */}
+          <View style={styles.buttonContainer}>
+            {/* Complete Button - Primary with Icon */}
+            <AnimatedButton
+              title="Complete Setup"
+              icon="checkmark-circle"
+              iconPosition="right"
+              onPress={handleComplete}
+              loading={isSubmitting}
+              disabled={!isFormValid}
+              fullWidth
+              size="large"
+            />
+
+            {/* Skip Button - Ghost variant */}
+            <AnimatedButton
+              title="Skip for Now"
+              variant="ghost"
+              onPress={handleSkip}
+              fullWidth
+              size="medium"
+              disabled={isSubmitting}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -453,23 +476,7 @@ const styles = StyleSheet.create({
     color: '#2D3436',
     fontWeight: '500',
   },
-  completeButton: {
-    backgroundColor: '#2D3436',
-    flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    gap: 10,
-  },
-  completeButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+  buttonContainer: {
+    gap: 12,
   },
 });

@@ -1,15 +1,16 @@
+import AnimatedButton from "@/components/AnimatedButton";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function RegisterScreen() {
@@ -20,13 +21,22 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ ADD THIS
 
-  const handleRegister = () => {
-    // TODO: Implement registration logic
+  const handleRegister = async () => {
+    // ✅ Make async
+    setIsSubmitting(true); // ✅ ADD
+    await new Promise((resolve) => setTimeout(resolve, 1500)); // ✅ ADD - Simulate API
     console.log("Register:", { name, email, password });
+    setIsSubmitting(false); // ✅ ADD
     router.push("/(auth)/verify-email");
   };
 
+  const isFormValid =
+    name.length >= 2 &&
+    email.includes("@") &&
+    password.length >= 6 &&
+    password === confirmPassword;
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -157,25 +167,26 @@ export default function RegisterScreen() {
           </Text>
 
           {/* Register Button */}
-          <TouchableOpacity
-            style={styles.registerButton}
-            onPress={handleRegister}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.registerButtonText}>Create Account</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.buttonSpacing}>
+            <AnimatedButton
+              title="Create Account"
+              icon="arrow-forward"
+              iconPosition="right"
+              onPress={handleRegister}
+              loading={isSubmitting}
+              disabled={!isFormValid}
+              fullWidth
+              size="large"
+            />
+          </View>
 
-          {/* Login Link */}
-          <TouchableOpacity
-            style={styles.loginContainer}
+          <AnimatedButton
+            title="Already have an account? Log In"
+            variant="ghost"
             onPress={() => router.push("/(auth)/login")}
-          >
-            <Text style={styles.loginText}>
-              Already have an account?{" "}
-              <Text style={styles.loginLink}>Log In</Text>
-            </Text>
-          </TouchableOpacity>
+            fullWidth
+            disabled={isSubmitting}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -344,5 +355,8 @@ const styles = StyleSheet.create({
   loginLink: {
     color: "#2D3436",
     fontWeight: "600",
+  },
+  buttonSpacing: {
+    marginBottom: 16,
   },
 });

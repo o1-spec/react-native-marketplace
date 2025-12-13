@@ -1,27 +1,47 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleResetPassword = () => {
-    // TODO: Implement password reset logic
+  const handleResetPassword = async () => {
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     console.log('Reset password for:', email);
+    setIsSubmitting(false);
     setSent(true);
   };
+
+  const handleResend = async () => {
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    console.log('Resending email to:', email);
+    setIsSubmitting(false);
+  };
+
+  // Email validation
+  const isEmailValid = email.includes('@') && email.includes('.');
 
   return (
     <KeyboardAvoidingView
@@ -85,28 +105,37 @@ export default function ForgotPasswordScreen() {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    editable={!isSubmitting}
                   />
+                  {isEmailValid && (
+                    <Ionicons name="checkmark-circle" size={20} color="#4ECDC4" />
+                  )}
                 </View>
               </View>
 
-              {/* Reset Button */}
-              <TouchableOpacity
-                style={styles.resetButton}
-                onPress={handleResetPassword}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.resetButtonText}>Send Reset Link</Text>
-                <Ionicons name="paper-plane" size={20} color="#fff" />
-              </TouchableOpacity>
+              {/* Send Reset Link Button - PRIMARY */}
+              <View style={styles.buttonSpacing}>
+                <AnimatedButton
+                  title="Send Reset Link"
+                  icon="paper-plane"
+                  iconPosition="right"
+                  onPress={handleResetPassword}
+                  loading={isSubmitting}
+                  disabled={!isEmailValid}
+                  fullWidth
+                  size="large"
+                />
+              </View>
 
-              {/* Back to Login */}
-              <TouchableOpacity 
-                style={styles.loginContainer}
+              {/* Back to Login Button - GHOST */}
+              <AnimatedButton
+                title="Back to Login"
+                icon="arrow-back"
+                variant="ghost"
                 onPress={() => router.push('/(auth)/login')}
-              >
-                <Ionicons name="arrow-back" size={16} color="#636E72" />
-                <Text style={styles.loginText}>Back to Login</Text>
-              </TouchableOpacity>
+                fullWidth
+                disabled={isSubmitting}
+              />
             </View>
           </>
         ) : (
@@ -129,21 +158,27 @@ export default function ForgotPasswordScreen() {
 
             {/* Actions */}
             <View style={styles.form}>
-              <TouchableOpacity
-                style={styles.resetButton}
-                onPress={() => router.push('/(auth)/login')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.resetButtonText}>Back to Login</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </TouchableOpacity>
+              {/* Back to Login Button - PRIMARY */}
+              <View style={styles.buttonSpacing}>
+                <AnimatedButton
+                  title="Back to Login"
+                  icon="arrow-forward"
+                  iconPosition="right"
+                  onPress={() => router.push('/(auth)/login')}
+                  fullWidth
+                  size="large"
+                />
+              </View>
 
-              <TouchableOpacity 
-                style={styles.resendContainer}
-                onPress={() => setSent(false)}
-              >
-                <Text style={styles.resendText}>Resend Email</Text>
-              </TouchableOpacity>
+              {/* Resend Email Button - OUTLINE */}
+              <AnimatedButton
+                title="Resend Email"
+                icon="refresh"
+                variant="outline"
+                onPress={handleResend}
+                loading={isSubmitting}
+                fullWidth
+              />
             </View>
           </>
         )}
@@ -297,45 +332,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2D3436',
   },
-  resetButton: {
-    backgroundColor: '#2D3436',
-    flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    marginBottom: 20,
-    gap: 10,
-  },
-  resetButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  loginText: {
-    fontSize: 15,
-    color: '#636E72',
-    fontWeight: '600',
-  },
-  resendContainer: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  resendText: {
-    fontSize: 15,
-    color: '#2D3436',
-    fontWeight: '600',
+  buttonSpacing: {
+    marginBottom: 16,
   },
 });

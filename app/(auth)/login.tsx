@@ -1,15 +1,16 @@
+import AnimatedButton from "@/components/AnimatedButton";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -17,11 +18,17 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setIsSubmitting(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // ✅ ADD - Simulate API
     console.log("Login:", { email, password });
+    setIsSubmitting(false); // ✅ ADD
     router.replace("/(tabs)");
   };
+
+  const isFormValid = email.length > 0 && password.length >= 6;
 
   return (
     <KeyboardAvoidingView
@@ -111,25 +118,27 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Login Button */}
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.loginButtonText}>Log In</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.buttonSpacing}>
+            <AnimatedButton
+              title="Log In"
+              icon="arrow-forward"
+              iconPosition="right"
+              onPress={handleLogin}
+              loading={isSubmitting}
+              disabled={!isFormValid}
+              fullWidth
+              size="large"
+            />
+          </View>
 
           {/* Register Link */}
-          <TouchableOpacity
-            style={styles.registerContainer}
+          <AnimatedButton
+            title="Don't have an account? Sign Up"
+            variant="ghost"
             onPress={() => router.push("/(auth)/register")}
-          >
-            <Text style={styles.registerText}>
-              Don't have an account?{" "}
-              <Text style={styles.registerLink}>Sign Up</Text>
-            </Text>
-          </TouchableOpacity>
+            fullWidth
+            disabled={isSubmitting}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -296,5 +305,8 @@ const styles = StyleSheet.create({
   registerLink: {
     color: "#2D3436",
     fontWeight: "600",
+  },
+  buttonSpacing: {
+    marginBottom: 16,
   },
 });
