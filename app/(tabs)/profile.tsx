@@ -291,7 +291,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.actionItem}
-            onPress={() => Alert.alert("Help & Support", "Coming soon...")}
+            onPress={() => router.push("/help")}
           >
             <View style={styles.actionLeft}>
               <Ionicons name="help-circle-outline" size={24} color="#636E72" />

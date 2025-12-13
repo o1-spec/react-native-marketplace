@@ -181,8 +181,7 @@ export default function ExploreScreen() {
           </ScrollView>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
+       <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
           </View>
@@ -190,7 +189,10 @@ export default function ExploreScreen() {
           <View style={styles.quickActions}>
             <TouchableOpacity
               style={styles.quickActionCard}
-              onPress={() => Alert.alert('Trending', 'Coming soon...')}
+              onPress={() => router.push({
+                pathname: '/search',
+                params: { type: 'trending' },
+              })}
             >
               <View style={styles.quickActionIcon}>
                 <Ionicons name="trending-up" size={28} color="#FF6B6B" />
@@ -200,7 +202,10 @@ export default function ExploreScreen() {
 
             <TouchableOpacity
               style={styles.quickActionCard}
-              onPress={() => Alert.alert('New Arrivals', 'Coming soon...')}
+              onPress={() => router.push({
+                pathname: '/search',
+                params: { type: 'new-arrivals' },
+              })}
             >
               <View style={styles.quickActionIcon}>
                 <Ionicons name="flash" size={28} color="#FFB84D" />
@@ -210,7 +215,10 @@ export default function ExploreScreen() {
 
             <TouchableOpacity
               style={styles.quickActionCard}
-              onPress={() => Alert.alert('Nearby', 'Coming soon...')}
+              onPress={() => router.push({
+                pathname: '/search',
+                params: { type: 'nearby' },
+              })}
             >
               <View style={styles.quickActionIcon}>
                 <Ionicons name="location" size={28} color="#4ECDC4" />
@@ -220,7 +228,10 @@ export default function ExploreScreen() {
 
             <TouchableOpacity
               style={styles.quickActionCard}
-              onPress={() => Alert.alert('Deals', 'Coming soon...')}
+              onPress={() => router.push({
+                pathname: '/search',
+                params: { type: 'deals' },
+              })}
             >
               <View style={styles.quickActionIcon}>
                 <Ionicons name="pricetag" size={28} color="#A29BFE" />
