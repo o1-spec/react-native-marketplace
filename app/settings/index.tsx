@@ -2,14 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  UIManager,
+  View,
 } from 'react-native';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -18,9 +29,29 @@ export default function SettingsScreen() {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [messageNotifications, setMessageNotifications] = useState(true);
-  const [offerNotifications, setOfferNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [locationServices, setLocationServices] = useState(true);
+
+  // Change password modal state
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    account: true, // Start with account expanded
+    notifications: false,
+    privacy: false,
+    support: false,
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -32,7 +63,6 @@ export default function SettingsScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: () => {
-            // TODO: Clear auth state
             router.replace('/(auth)/login');
           },
         },
@@ -40,23 +70,61 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Account Deleted', 'Your account has been deleted');
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+      setPasswordModalVisible(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      Alert.alert('Success', 'Password changed successfully!');
+    }, 1500);
   };
+
+  const renderSectionHeader = (
+    title: string, 
+    section: keyof typeof expandedSections, 
+    icon: string, 
+    color: string
+  ) => (
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      onPress={() => toggleSection(section)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.sectionHeaderLeft}>
+        <View style={[styles.sectionIcon, { backgroundColor: color }]}>
+          <Ionicons name={icon as any} size={20} color="#fff" />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      <Animated.View style={{
+        transform: [{ 
+          rotate: expandedSections[section] ? '90deg' : '0deg' 
+        }]
+      }}>
+        <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+      </Animated.View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -78,301 +146,165 @@ export default function SettingsScreen() {
       >
         {/* Account Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          {renderSectionHeader('Account', 'account', 'person-outline', '#4ECDC4')}
+          
+          {expandedSections.account && (
+            <View style={styles.sectionContent}>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/(auth)/complete-profile')}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
+                    <Ionicons name="person-outline" size={22} color="#4ECDC4" />
+                  </View>
+                  <Text style={styles.settingText}>Edit Profile</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => router.push('/(auth)/complete-profile')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
-                <Ionicons name="person-outline" size={22} color="#4ECDC4" />
-              </View>
-              <Text style={styles.settingText}>Edit Profile</Text>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => setPasswordModalVisible(true)}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#FFF4E6' }]}>
+                    <Ionicons name="lock-closed-outline" size={22} color="#FFB84D" />
+                  </View>
+                  <Text style={styles.settingText}>Change Password</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Change Password', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFF4E6' }]}>
-                <Ionicons name="lock-closed-outline" size={22} color="#FFB84D" />
-              </View>
-              <Text style={styles.settingText}>Change Password</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Payment Methods', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
-                <Ionicons name="card-outline" size={22} color="#A29BFE" />
-              </View>
-              <Text style={styles.settingText}>Payment Methods</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Shipping Addresses', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="location-outline" size={22} color="#55EFC4" />
-              </View>
-              <Text style={styles.settingText}>Shipping Addresses</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
+          )}
         </View>
 
         {/* Notifications Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFE5E5' }]}>
-                <Ionicons name="notifications-outline" size={22} color="#FF6B6B" />
+          {renderSectionHeader('Notifications', 'notifications', 'notifications-outline', '#FF6B6B')}
+          
+          {expandedSections.notifications && (
+            <View style={styles.sectionContent}>
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#FFE5E5' }]}>
+                    <Ionicons name="notifications-outline" size={22} color="#FF6B6B" />
+                  </View>
+                  <Text style={styles.settingText}>Push Notifications</Text>
+                </View>
+                <Switch
+                  value={pushNotifications}
+                  onValueChange={setPushNotifications}
+                  trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
+                  thumbColor="#fff"
+                />
               </View>
-              <Text style={styles.settingText}>Push Notifications</Text>
-            </View>
-            <Switch
-              value={pushNotifications}
-              onValueChange={setPushNotifications}
-              trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
-              thumbColor="#fff"
-            />
-          </View>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
-                <Ionicons name="mail-outline" size={22} color="#4ECDC4" />
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
+                    <Ionicons name="mail-outline" size={22} color="#4ECDC4" />
+                  </View>
+                  <Text style={styles.settingText}>Email Notifications</Text>
+                </View>
+                <Switch
+                  value={emailNotifications}
+                  onValueChange={setEmailNotifications}
+                  trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
+                  thumbColor="#fff"
+                />
               </View>
-              <Text style={styles.settingText}>Email Notifications</Text>
-            </View>
-            <Switch
-              value={emailNotifications}
-              onValueChange={setEmailNotifications}
-              trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
-              thumbColor="#fff"
-            />
-          </View>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
-                <Ionicons name="chatbubble-outline" size={22} color="#A29BFE" />
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
+                    <Ionicons name="chatbubble-outline" size={22} color="#A29BFE" />
+                  </View>
+                  <Text style={styles.settingText}>Message Notifications</Text>
+                </View>
+                <Switch
+                  value={messageNotifications}
+                  onValueChange={setMessageNotifications}
+                  trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
+                  thumbColor="#fff"
+                />
               </View>
-              <Text style={styles.settingText}>Message Notifications</Text>
             </View>
-            <Switch
-              value={messageNotifications}
-              onValueChange={setMessageNotifications}
-              trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
-              thumbColor="#fff"
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFF4E6' }]}>
-                <Ionicons name="pricetag-outline" size={22} color="#FFB84D" />
-              </View>
-              <Text style={styles.settingText}>Offer Notifications</Text>
-            </View>
-            <Switch
-              value={offerNotifications}
-              onValueChange={setOfferNotifications}
-              trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
-              thumbColor="#fff"
-            />
-          </View>
+          )}
         </View>
 
-        {/* Preferences Section */}
+        {/* Privacy Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          {renderSectionHeader('Privacy', 'privacy', 'shield-checkmark-outline', '#A29BFE')}
+          
+          {expandedSections.privacy && (
+            <View style={styles.sectionContent}>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/(auth)/privacy')}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
+                    <Ionicons name="shield-checkmark-outline" size={22} color="#A29BFE" />
+                  </View>
+                  <Text style={styles.settingText}>Privacy Policy</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
 
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#2D3436' }]}>
-                <Ionicons name="moon-outline" size={22} color="#fff" />
-              </View>
-              <Text style={styles.settingText}>Dark Mode</Text>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/(auth)/terms')}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
+                    <Ionicons name="document-text-outline" size={22} color="#4ECDC4" />
+                  </View>
+                  <Text style={styles.settingText}>Terms of Service</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
             </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
-              thumbColor="#fff"
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="navigate-outline" size={22} color="#55EFC4" />
-              </View>
-              <Text style={styles.settingText}>Location Services</Text>
-            </View>
-            <Switch
-              value={locationServices}
-              onValueChange={setLocationServices}
-              trackColor={{ false: '#E5E5EA', true: '#4ECDC4' }}
-              thumbColor="#fff"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Language', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
-                <Ionicons name="language-outline" size={22} color="#4ECDC4" />
-              </View>
-              <View>
-                <Text style={styles.settingText}>Language</Text>
-                <Text style={styles.settingSubtext}>English (US)</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Currency', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFF4E6' }]}>
-                <Ionicons name="cash-outline" size={22} color="#FFB84D" />
-              </View>
-              <View>
-                <Text style={styles.settingText}>Currency</Text>
-                <Text style={styles.settingSubtext}>USD ($)</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Privacy & Security */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy & Security</Text>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Privacy Policy', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
-                <Ionicons name="shield-checkmark-outline" size={22} color="#A29BFE" />
-              </View>
-              <Text style={styles.settingText}>Privacy Policy</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Terms of Service', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
-                <Ionicons name="document-text-outline" size={22} color="#4ECDC4" />
-              </View>
-              <Text style={styles.settingText}>Terms of Service</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Blocked Users', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFE5E5' }]}>
-                <Ionicons name="ban-outline" size={22} color="#FF6B6B" />
-              </View>
-              <Text style={styles.settingText}>Blocked Users</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
+          )}
         </View>
 
         {/* Support Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
+          {renderSectionHeader('Support', 'support', 'help-circle-outline', '#4ECDC4')}
+          
+          {expandedSections.support && (
+            <View style={styles.sectionContent}>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/help')}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
+                    <Ionicons name="help-circle-outline" size={22} color="#4ECDC4" />
+                  </View>
+                  <Text style={styles.settingText}>Help Center</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Help Center', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E5F9F8' }]}>
-                <Ionicons name="help-circle-outline" size={22} color="#4ECDC4" />
-              </View>
-              <Text style={styles.settingText}>Help Center</Text>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => Alert.alert('Contact Us', 'Coming soon...')}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
+                    <Ionicons name="mail-outline" size={22} color="#A29BFE" />
+                  </View>
+                  <Text style={styles.settingText}>Contact Us</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Contact Us', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
-                <Ionicons name="mail-outline" size={22} color="#A29BFE" />
-              </View>
-              <Text style={styles.settingText}>Contact Us</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('Rate App', 'Coming soon...')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFF4E6' }]}>
-                <Ionicons name="star-outline" size={22} color="#FFB84D" />
-              </View>
-              <Text style={styles.settingText}>Rate App</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => Alert.alert('About', 'Version 1.0.0')}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="information-circle-outline" size={22} color="#55EFC4" />
-              </View>
-              <View>
-                <Text style={styles.settingText}>About</Text>
-                <Text style={styles.settingSubtext}>Version 1.0.0</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
+          )}
         </View>
 
-        {/* Danger Zone */}
+        {/* Logout Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-
           <TouchableOpacity
             style={styles.settingItem}
             onPress={handleLogout}
@@ -385,26 +317,89 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={handleDeleteAccount}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFE5E5' }]}>
-                <Ionicons name="trash-outline" size={22} color="#FF6B6B" />
-              </View>
-              <Text style={[styles.settingText, { color: '#FF6B6B' }]}>
-                Delete Account
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
         </View>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Change Password Modal */}
+      <Modal
+        visible={passwordModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.modalBackButton}
+              onPress={() => setPasswordModalVisible(false)}
+            >
+              <Ionicons name="close" size={24} color="#2D3436" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Change Password</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Current Password</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#B2BEC3" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter current password"
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>New Password</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#B2BEC3" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm New Password</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#B2BEC3" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.changePasswordButton, isLoading && styles.disabledButton]}
+              onPress={handleChangePassword}
+              disabled={isLoading}
+            >
+              <Text style={styles.changePasswordButtonText}>
+                {isLoading ? 'Changing...' : 'Change Password'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -442,17 +437,36 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#fff',
     marginTop: 16,
-    paddingVertical: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#636E72',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3436',
+  },
+  sectionContent: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
   },
   settingItem: {
     flexDirection: 'row',
@@ -488,5 +502,78 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalBackButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D3436',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2D3436',
+  },
+  changePasswordButton: {
+    backgroundColor: '#4ECDC4',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  disabledButton: {
+    backgroundColor: '#B2BEC3',
+  },
+  changePasswordButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
