@@ -8,6 +8,7 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -98,6 +99,7 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const [favorites, setFavorites] = useState(mockFavorites);
   const [sortBy, setSortBy] = useState<'recent' | 'price-low' | 'price-high'>('recent');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleRemoveFavorite = (id: string) => {
     Alert.alert(
@@ -153,15 +155,28 @@ export default function FavoritesScreen() {
     );
   };
 
-  const getSortedFavorites = () => {
+  const getFilteredAndSortedFavorites = () => {
+    let filtered = [...favorites];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((item) => 
+        item.title.toLowerCase().includes(query) ||
+        item.location.toLowerCase().includes(query) ||
+        item.seller.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
     switch (sortBy) {
       case 'price-low':
-        return [...favorites].sort((a, b) => a.price - b.price);
+        return filtered.sort((a, b) => a.price - b.price);
       case 'price-high':
-        return [...favorites].sort((a, b) => b.price - a.price);
+        return filtered.sort((a, b) => b.price - a.price);
       case 'recent':
       default:
-        return favorites;
+        return filtered;
     }
   };
 
@@ -183,20 +198,54 @@ export default function FavoritesScreen() {
     </View>
   );
 
-  const renderHeader = () => (
-    <View style={styles.statsContainer}>
-      <View style={styles.statsCard}>
-        <Text style={styles.statsValue}>{favorites.length}</Text>
-        <Text style={styles.statsLabel}>Saved Items</Text>
+  const renderHeader = () => {
+    const filteredFavorites = getFilteredAndSortedFavorites();
+    
+    return (
+      <View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={20} color="#636E72" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search your favorites..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                style={styles.clearButton}
+              >
+                <Ionicons name="close-circle" size={20} color="#636E72" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsCard}>
+            <Text style={styles.statsValue}>{filteredFavorites.length}</Text>
+            <Text style={styles.statsLabel}>
+              {searchQuery ? 'Matching Items' : 'Saved Items'}
+            </Text>
+          </View>
+          <View style={styles.statsCard}>
+            <Text style={styles.statsValue}>
+              ${filteredFavorites.reduce((sum, item) => sum + item.price, 0).toLocaleString()}
+            </Text>
+            <Text style={styles.statsLabel}>Total Value</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.statsCard}>
-        <Text style={styles.statsValue}>
-          ${favorites.reduce((sum, item) => sum + item.price, 0).toLocaleString()}
-        </Text>
-        <Text style={styles.statsLabel}>Total Value</Text>
-      </View>
-    </View>
-  );
+    );
+  };
+
+  const filteredFavorites = getFilteredAndSortedFavorites();
 
   return (
     <View style={styles.container}>
@@ -225,7 +274,7 @@ export default function FavoritesScreen() {
 
       {/* Content */}
       <FlatList
-        data={getSortedFavorites()}
+        data={filteredFavorites}
         renderItem={({ item }) => (
           <View style={styles.productCardWrapper}>
             <ProductCard
@@ -252,15 +301,15 @@ export default function FavoritesScreen() {
           </View>
         )}
         keyExtractor={(item) => item.id}
-        numColumns={2}
+        numColumns={1} // Changed from 2 to 1
         contentContainerStyle={[
           styles.listContent,
-          favorites.length === 0 && styles.emptyContainer,
+          filteredFavorites.length === 0 && styles.emptyContainer,
         ]}
         ListHeaderComponent={favorites.length > 0 ? renderHeader : null}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
-        columnWrapperStyle={favorites.length > 0 ? styles.row : undefined}
+        // Removed columnWrapperStyle since we're using single column
       />
     </View>
   );
@@ -305,16 +354,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
-    padding: 16,
+  searchContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
-  row: {
-    justifyContent: 'space-between',
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2D3436',
+    paddingVertical: 0, // Remove default padding
+  },
+  clearButton: {
+    padding: 4,
+  },
+  listContent: {
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   statsContainer: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 20,
+    paddingHorizontal: 16,
   },
   statsCard: {
     flex: 1,
@@ -339,8 +412,9 @@ const styles = StyleSheet.create({
     color: '#636E72',
   },
   productCardWrapper: {
-    width: '48%',
-    marginBottom: 16,
+    width: '100%', // Changed from '48%' to '100%'
+    marginBottom: 20,
+    paddingHorizontal: 16, // Added horizontal padding
   },
   cardFooter: {
     backgroundColor: '#fff',
