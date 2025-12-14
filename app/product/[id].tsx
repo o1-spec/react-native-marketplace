@@ -1,4 +1,5 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import { FadeInView, SlideInView } from '@/components/AnimatedViews';
 import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -114,49 +115,52 @@ export default function ProductDetailScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Image Carousel */}
-        <View style={styles.imageContainer}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={(e) => {
-              const index = Math.round(
-                e.nativeEvent.contentOffset.x / width
-              );
-              setCurrentImageIndex(index);
-            }}
-            scrollEventThrottle={16}
-          >
-            {mockProduct.images.map((image, index) => (
-              <Image
-                key={index}
-                source={{ uri: image }}
-                style={styles.productImage}
-              />
-            ))}
-          </ScrollView>
+        <FadeInView duration={300}>
+          <View style={styles.imageContainer}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={(e) => {
+                const index = Math.round(
+                  e.nativeEvent.contentOffset.x / width
+                );
+                setCurrentImageIndex(index);
+              }}
+              scrollEventThrottle={16}
+            >
+              {mockProduct.images.map((image, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: image }}
+                  style={styles.productImage}
+                />
+              ))}
+            </ScrollView>
 
-          {/* Image Indicators */}
-          <View style={styles.imageIndicators}>
-            {mockProduct.images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.indicator,
-                  index === currentImageIndex && styles.activeIndicator,
-                ]}
-              />
-            ))}
-          </View>
+            {/* Image Indicators */}
+            <View style={styles.imageIndicators}>
+              {mockProduct.images.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    index === currentImageIndex && styles.activeIndicator,
+                  ]}
+                />
+              ))}
+            </View>
 
-          {/* Condition Badge */}
-          <View style={styles.conditionBadge}>
-            <Text style={styles.conditionText}>{mockProduct.condition}</Text>
+            {/* Condition Badge */}
+            <View style={styles.conditionBadge}>
+              <Text style={styles.conditionText}>{mockProduct.condition}</Text>
+            </View>
           </View>
-        </View>
+        </FadeInView>
 
         {/* Product Info */}
-        <View style={styles.infoContainer}>
+        <SlideInView direction="up" delay={150}>
+          <View style={styles.infoContainer}>
           <Text style={styles.price}>${mockProduct.price.toLocaleString()}</Text>
           <Text style={styles.title}>{mockProduct.title}</Text>
 
@@ -176,13 +180,15 @@ export default function ProductDetailScreen() {
             <Ionicons name="pricetag-outline" size={14} color="#4ECDC4" />
             <Text style={styles.categoryText}>{mockProduct.category}</Text>
           </View>
-        </View>
+          </View>
+        </SlideInView>
 
         {/* Seller Info */}
-        <TouchableOpacity
-          style={styles.sellerContainer}
-          onPress={() => router.push(`/user/${mockProduct.seller.id}`)}
-        >
+        <SlideInView direction="up" delay={250}>
+          <TouchableOpacity
+            style={styles.sellerContainer}
+            onPress={() => router.push(`/user/${mockProduct.seller.id}`)}
+          >
           <View style={styles.sellerLeft}>
             <Image
               source={{ uri: mockProduct.seller.avatar }}
@@ -207,19 +213,24 @@ export default function ProductDetailScreen() {
             </View>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </SlideInView>
 
         {/* Description */}
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.description}>{mockProduct.description}</Text>
-        </View>
+        <SlideInView direction="up" delay={350}>
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.description}>{mockProduct.description}</Text>
+          </View>
+        </SlideInView>
 
         {/* Similar Products Placeholder */}
-        <View style={styles.similarSection}>
-          <Text style={styles.sectionTitle}>Similar Products</Text>
-          <Text style={styles.placeholderText}>Coming soon...</Text>
-        </View>
+        <SlideInView direction="up" delay={450}>
+          <View style={styles.similarSection}>
+            <Text style={styles.sectionTitle}>Similar Products</Text>
+            <Text style={styles.placeholderText}>Coming soon...</Text>
+          </View>
+        </SlideInView>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />

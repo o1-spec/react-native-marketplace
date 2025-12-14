@@ -1,3 +1,4 @@
+import { FadeInView } from '@/components/AnimatedViews';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { Ionicons } from '@expo/vector-icons';
@@ -202,15 +203,15 @@ export default function HomeScreen() {
                 </View>
               ))
             ) : (
-              // Show actual products when loaded
-              mockProducts.map((product) => (
-                <View key={product.id} style={styles.productCardWrapper}>
+              // Show actual products when loaded with fade animation
+              mockProducts.map((product, index) => (
+                <FadeInView key={product.id} delay={index * 80} style={styles.productCardWrapper}>
                   <ProductCard
                     {...product}
                     isFavorite={favorites.includes(product.id)}
                     onFavoritePress={() => toggleFavorite(product.id)}
                   />
-                </View>
+                </FadeInView>
               ))
             )}
           </View>

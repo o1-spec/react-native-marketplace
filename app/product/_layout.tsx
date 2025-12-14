@@ -1,12 +1,19 @@
+import { ScreenTransitions } from '@/constants/transitions';
 import { Stack } from 'expo-router';
 
 export default function ProductLayout() {
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+      }}
+    >
       <Stack.Screen 
         name="[id]" 
         options={{ 
           headerShown: false,
+          ...ScreenTransitions.zoomIn,
         }} 
       />
       <Stack.Screen 
@@ -14,6 +21,7 @@ export default function ProductLayout() {
         options={{ 
           title: 'Edit Listing',
           headerBackTitle: 'Back',
+          ...ScreenTransitions.slideFromRight,
         }} 
       />
     </Stack>
