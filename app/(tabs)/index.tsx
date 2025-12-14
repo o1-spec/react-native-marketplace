@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -75,6 +76,8 @@ const categories = [
   { id: '6', name: 'Toys', icon: 'game-controller-outline', color: '#74B9FF' },
 ];
 
+const conditions = ['New', 'Like New', 'Good', 'Fair'];
+
 export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -82,6 +85,14 @@ export default function HomeScreen() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Mini filter modal state
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filters, setFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    condition: '',
+  });
 
   useEffect(() => {
     // Simulate initial data load
@@ -130,7 +141,42 @@ export default function HomeScreen() {
   };
 
   const handleFilterPress = () => {
-    router.push('/(tabs)/explore');
+    setFilterModalVisible(true);
+  };
+
+  const handleApplyFilters = () => {
+    const params: any = { type: 'quick-filter' };
+    
+    if (filters.minPrice || filters.maxPrice) {
+      params.priceRange = `${filters.minPrice || 0}-${filters.maxPrice || ''}`;
+    }
+    if (filters.condition) params.condition = filters.condition;
+    if (searchQuery) params.query = searchQuery;
+
+    setFilterModalVisible(false);
+    router.push({
+      pathname: '/search',
+      params,
+    });
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      minPrice: '',
+      maxPrice: '',
+      condition: '',
+    });
+  };
+
+  const updateFilter = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.minPrice || filters.maxPrice) count++;
+    if (filters.condition) count++;
+    return count;
   };
 
   const handleSeeAllCategories = () => {
@@ -189,6 +235,11 @@ export default function HomeScreen() {
           onPress={handleFilterPress}
         >
           <Ionicons name="options-outline" size={20} color="#2D3436" />
+          {getActiveFiltersCount() > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{getActiveFiltersCount()}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -271,6 +322,104 @@ export default function HomeScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Mini Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Quick Filters</Text>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#636E72" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Price Range */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Price Range</Text>
+                <View style={styles.priceInputs}>
+                  <View style={styles.priceInputContainer}>
+                    <Text style={styles.priceLabel}>Min</Text>
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.currencySymbol}>$</Text>
+                      <TextInput
+                        style={styles.priceInput}
+                        placeholder="0"
+                        value={filters.minPrice}
+                        onChangeText={(value) => updateFilter('minPrice', value)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.priceInputContainer}>
+                    <Text style={styles.priceLabel}>Max</Text>
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.currencySymbol}>$</Text>
+                      <TextInput
+                        style={styles.priceInput}
+                        placeholder="No limit"
+                        value={filters.maxPrice}
+                        onChangeText={(value) => updateFilter('maxPrice', value)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Condition */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Condition</Text>
+                <View style={styles.conditionOptions}>
+                  {conditions.map((condition) => (
+                    <TouchableOpacity
+                      key={condition}
+                      style={[
+                        styles.conditionOption,
+                        filters.condition === condition && styles.conditionOptionActive,
+                      ]}
+                      onPress={() => updateFilter('condition', 
+                        filters.condition === condition ? '' : condition
+                      )}
+                    >
+                      <Text style={[
+                        styles.conditionText,
+                        filters.condition === condition && styles.conditionTextActive,
+                      ]}>
+                        {condition}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearFilters}
+              >
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={handleApplyFilters}
+              >
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -354,6 +503,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  filterBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   content: {
     flex: 1,
   },
@@ -408,5 +573,137 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 20,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D3436',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginBottom: 12,
+  },
+  priceInputs: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  priceInputContainer: {
+    flex: 1,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#636E72',
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: '#636E72',
+    fontWeight: '600',
+  },
+  priceInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2D3436',
+  },
+  conditionOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  conditionOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  conditionOptionActive: {
+    backgroundColor: '#E5F9F8',
+    borderColor: '#4ECDC4',
+  },
+  conditionText: {
+    fontSize: 14,
+    color: '#636E72',
+    fontWeight: '600',
+  },
+  conditionTextActive: {
+    color: '#4ECDC4',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+    gap: 12,
+  },
+  clearButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#636E72',
+  },
+  applyButton: {
+    flex: 2,
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
