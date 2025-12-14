@@ -1,16 +1,17 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 // Mock data
@@ -71,29 +72,40 @@ export default function ChatScreen() {
   const router = useRouter();
   const [messages, setMessages] = useState(mockMessages);
   const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputText.trim()) return;
 
-    const newMessage = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
-      senderId: 'me',
-      timestamp: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      }),
-      isRead: false,
-    };
+    setIsSending(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    setMessages([...messages, newMessage]);
-    setInputText('');
+      const newMessage = {
+        id: Date.now().toString(),
+        text: inputText.trim(),
+        senderId: 'me',
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+        isRead: false,
+      };
 
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+      setMessages([...messages, newMessage]);
+      setInputText('');
+
+      // Scroll to bottom
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const renderMessage = ({ item }: any) => {
@@ -227,20 +239,15 @@ export default function ChatScreen() {
           multiline
           maxLength={500}
         />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !inputText.trim() && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSend}
-          disabled={!inputText.trim()}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={inputText.trim() ? '#fff' : '#B2BEC3'}
-          />
-        </TouchableOpacity>
+        <View style={styles.sendButtonWrapper}>
+          <AnimatedButton
+            icon="send"
+            onPress={handleSend}
+            loading={isSending}
+            disabled={!inputText.trim() || isSending}
+            size="small"
+            style={styles.sendButton} title={''}          />
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -426,16 +433,12 @@ const styles = StyleSheet.create({
     color: '#2D3436',
     maxHeight: 100,
   },
+  sendButtonWrapper: {
+    marginBottom: 4,
+  },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2D3436',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#F5F5F5',
   },
 });

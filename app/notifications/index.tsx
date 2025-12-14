@@ -1,14 +1,15 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type NotificationType =
@@ -333,13 +334,15 @@ export default function NotificationsScreen() {
 
       {/* Mark All as Read Button */}
       {unreadCount > 0 && (
-        <TouchableOpacity
-          style={styles.markAllButton}
-          onPress={markAllAsRead}
-        >
-          <Ionicons name="checkmark-done" size={18} color="#4ECDC4" />
-          <Text style={styles.markAllText}>Mark all as read</Text>
-        </TouchableOpacity>
+        <View style={styles.markAllButtonContainer}>
+          <AnimatedButton
+            title="Mark all as read"
+            icon="checkmark-done"
+            variant="ghost"
+            onPress={markAllAsRead}
+            fullWidth
+          />
+        </View>
       )}
 
       {/* Notifications List */}
@@ -457,20 +460,12 @@ const styles = StyleSheet.create({
   activeFilterText: {
     color: '#fff',
   },
-  markAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  markAllButtonContainer: {
     backgroundColor: '#fff',
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
-  },
-  markAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4ECDC4',
   },
   content: {
     flex: 1,

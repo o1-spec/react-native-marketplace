@@ -1,18 +1,19 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const categories = [
@@ -37,6 +38,7 @@ export default function CreateListingScreen() {
   const [category, setCategory] = useState('');
   const [condition, setCondition] = useState('Good');
   const [location, setLocation] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
 
   const pickImages = async () => {
     if (images.length >= 5) {
@@ -102,7 +104,7 @@ export default function CreateListingScreen() {
     ]);
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     // Validation
     if (!title.trim()) {
       Alert.alert('Missing Title', 'Please enter a title for your listing');
@@ -121,21 +123,26 @@ export default function CreateListingScreen() {
       return;
     }
 
-    // TODO: Upload to backend
-    console.log('Posting listing:', {
-      title,
-      description,
-      price,
-      category,
-      condition,
-      location,
-      images,
-    });
+    setIsPosting(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-    Alert.alert(
-      'Success!',
-      'Your listing has been posted',
-      [
+      // TODO: Upload to backend
+      console.log('Posting listing:', {
+        title,
+        description,
+        price,
+        category,
+        condition,
+        location,
+        images,
+      });
+
+      Alert.alert(
+        'Success!',
+        'Your listing has been posted',
+        [
         {
           text: 'OK',
           onPress: () => {
@@ -153,6 +160,11 @@ export default function CreateListingScreen() {
         },
       ]
     );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to post listing. Please try again.');
+    } finally {
+      setIsPosting(false);
+    }
   };
 
   return (
@@ -350,10 +362,15 @@ export default function CreateListingScreen() {
         </View>
 
         {/* Post Button */}
-        <TouchableOpacity style={styles.postButton} onPress={handlePost}>
-          <Ionicons name="checkmark-circle" size={24} color="#fff" />
-          <Text style={styles.postButtonText}>Post Listing</Text>
-        </TouchableOpacity>
+        <AnimatedButton
+          title="Post Listing"
+          icon="checkmark-circle"
+          onPress={handlePost}
+          loading={isPosting}
+          disabled={isPosting || !title.trim() || !price.trim() || images.length === 0 || !category}
+          fullWidth
+          size="large"
+        />
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
@@ -558,27 +575,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: '#2D3436',
-  },
-  postButton: {
-    flexDirection: 'row',
-    backgroundColor: '#2D3436',
-    marginHorizontal: 20,
-    marginTop: 24,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  postButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
   },
   bottomSpacing: {
     height: 40,

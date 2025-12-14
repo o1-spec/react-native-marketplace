@@ -1,3 +1,4 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -151,12 +152,12 @@ export default function MessagesScreen() {
       <Text style={styles.emptyText}>
         Start a conversation by messaging sellers about their products
       </Text>
-      <TouchableOpacity
-        style={styles.browseButton}
+      <AnimatedButton
+        title="Browse Products"
+        icon="storefront"
         onPress={() => router.push('/(tabs)')}
-      >
-        <Text style={styles.browseButtonText}>Browse Products</Text>
-      </TouchableOpacity>
+        size="large"
+      />
     </View>
   );
 
@@ -388,21 +389,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
-  },
-  browseButton: {
-    backgroundColor: '#2D3436',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
   },
 });

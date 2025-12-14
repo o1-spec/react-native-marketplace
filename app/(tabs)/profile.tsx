@@ -1,14 +1,15 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 // Mock user data - replace with API call later
@@ -160,13 +161,12 @@ export default function ProfileScreen() {
           </View>
 
           {/* Edit Profile Button */}
-          <TouchableOpacity
-            style={styles.editProfileButton}
+          <AnimatedButton
+            title="Edit Profile"
+            icon="create-outline"
+            variant="secondary"
             onPress={() => router.push("/(auth)/complete-profile")}
-          >
-            <Ionicons name="create-outline" size={20} color="#2D3436" />
-            <Text style={styles.editProfileText}>Edit Profile</Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Quick Info */}
@@ -254,12 +254,12 @@ export default function ProfileScreen() {
                   : "No sold items yet"}
               </Text>
               {activeTab === "listings" && (
-                <TouchableOpacity
-                  style={styles.createButton}
+                <AnimatedButton
+                  title="Create Listing"
+                  icon="add-circle"
                   onPress={() => router.push("/(tabs)/create")}
-                >
-                  <Text style={styles.createButtonText}>Create Listing</Text>
-                </TouchableOpacity>
+                  size="large"
+                />
               )}
             </View>
           )}
@@ -419,20 +419,6 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: "#E5E5EA",
   },
-  editProfileButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-  editProfileText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#2D3436",
-  },
   infoSection: {
     backgroundColor: "#fff",
     paddingVertical: 12,
@@ -584,17 +570,6 @@ const styles = StyleSheet.create({
     color: "#636E72",
     marginTop: 16,
     marginBottom: 24,
-  },
-  createButton: {
-    backgroundColor: "#2D3436",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
   },
   actionsSection: {
     backgroundColor: "#fff",

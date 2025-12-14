@@ -1,15 +1,16 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface FAQItem {
@@ -302,13 +303,12 @@ export default function HelpScreen() {
             <Text style={styles.needHelpText}>
               Our support team is here to assist you
             </Text>
-            <TouchableOpacity
-              style={styles.contactSupportButton}
+            <AnimatedButton
+              title="Contact Support"
+              icon="mail"
               onPress={() => Linking.openURL('mailto:support@marketplace.com')}
-            >
-              <Ionicons name="mail" size={20} color="#fff" />
-              <Text style={styles.contactSupportText}>Contact Support</Text>
-            </TouchableOpacity>
+              size="large"
+            />
           </View>
         </View>
 
@@ -591,25 +591,6 @@ const styles = StyleSheet.create({
     color: '#636E72',
     textAlign: 'center',
     marginBottom: 24,
-  },
-  contactSupportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2D3436',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  contactSupportText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
   },
   quickLinks: {
     backgroundColor: '#fff',

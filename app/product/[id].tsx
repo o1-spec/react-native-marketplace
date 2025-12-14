@@ -1,15 +1,16 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Image,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -205,10 +206,15 @@ export default function ProductDetailScreen() {
         <TouchableOpacity style={styles.callButton}>
           <Ionicons name="call-outline" size={24} color="#2D3436" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.messageButton} onPress={handleMessage}>
-          <Ionicons name="chatbubble-outline" size={20} color="#fff" />
-          <Text style={styles.messageButtonText}>Message Seller</Text>
-        </TouchableOpacity>
+        <View style={styles.messageButtonWrapper}>
+          <AnimatedButton
+            title="Message Seller"
+            icon="chatbubble-outline"
+            onPress={handleMessage}
+            size="large"
+            style={styles.messageButton}
+          />
+        </View>
       </View>
     </View>
   );
@@ -443,24 +449,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  messageButton: {
+  messageButtonWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#2D3436',
+  },
+  messageButton: {
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  messageButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

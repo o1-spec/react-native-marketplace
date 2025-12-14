@@ -1,15 +1,16 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function VerifyEmailScreen() {
@@ -17,6 +18,8 @@ export default function VerifyEmailScreen() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Timer for resend
@@ -55,26 +58,46 @@ export default function VerifyEmailScreen() {
     }
   };
 
-  const handleVerify = (verificationCode?: string) => {
-    const codeToVerify = verificationCode || code.join('');
-    // TODO: Implement verification logic
-    console.log('Verifying code:', codeToVerify);
-    
-    // On success, go to complete profile or main app
-    router.replace('/(auth)/complete-profile');
-    // or router.replace('/(tabs)'); if profile not needed
+  const handleVerify = async (verificationCode?: string) => {
+    setIsVerifying(true);
+    try {
+      const codeToVerify = verificationCode || code.join('');
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // TODO: Implement verification logic
+      console.log('Verifying code:', codeToVerify);
+      
+      // On success, go to complete profile or main app
+      router.replace('/(auth)/complete-profile');
+      // or router.replace('/(tabs)'); if profile not needed
+    } catch (error) {
+      console.error('Verification failed:', error);
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
     
-    // TODO: Implement resend logic
-    console.log('Resending verification code');
-    
-    setResendTimer(60);
-    setCanResend(false);
-    setCode(['', '', '', '', '', '']);
-    inputRefs.current[0]?.focus();
+    setIsResending(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // TODO: Implement resend logic
+      console.log('Resending verification code');
+      
+      setResendTimer(60);
+      setCanResend(false);
+      setCode(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    } catch (error) {
+      console.error('Resend failed:', error);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -141,15 +164,15 @@ export default function VerifyEmailScreen() {
 
         {/* Resend Section */}
         <View style={styles.resendContainer}>
-          {canResend ? (
-            <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendActive}>Resend Code</Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.resendText}>
-              Resend code in <Text style={styles.timer}>{resendTimer}s</Text>
-            </Text>
-          )}
+          <AnimatedButton
+            title={canResend ? "Resend Code" : `Resend in ${resendTimer}s`}
+            icon="refresh"
+            variant="outline"
+            onPress={handleResend}
+            loading={isResending}
+            disabled={!canResend || isResending || isVerifying}
+            fullWidth
+          />
         </View>
 
         {/* Info Box */}
@@ -161,18 +184,16 @@ export default function VerifyEmailScreen() {
         </View>
 
         {/* Verify Button */}
-        <TouchableOpacity
-          style={[
-            styles.verifyButton,
-            code.every(d => d === '') && styles.verifyButtonDisabled
-          ]}
+        <AnimatedButton
+          title="Verify Email"
+          icon="checkmark-circle"
+          iconPosition="right"
           onPress={() => handleVerify()}
-          activeOpacity={0.8}
-          disabled={code.every(d => d === '')}
-        >
-          <Text style={styles.verifyButtonText}>Verify Email</Text>
-          <Ionicons name="checkmark-circle" size={20} color="#fff" />
-        </TouchableOpacity>
+          loading={isVerifying}
+          disabled={code.every(d => d === '') || isVerifying}
+          fullWidth
+          size="large"
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -306,21 +327,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5F9F8',
   },
   resendContainer: {
-    alignItems: 'center',
     marginBottom: 20,
-  },
-  resendText: {
-    fontSize: 15,
-    color: '#636E72',
-  },
-  resendActive: {
-    fontSize: 15,
-    color: '#2D3436',
-    fontWeight: '600',
-  },
-  timer: {
-    fontWeight: '700',
-    color: '#2D3436',
   },
   infoBox: {
     flexDirection: 'row',
@@ -338,28 +345,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#636E72',
     lineHeight: 20,
-  },
-  verifyButton: {
-    backgroundColor: '#2D3436',
-    flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    gap: 10,
-  },
-  verifyButtonDisabled: {
-    backgroundColor: '#B2BEC3',
-    shadowOpacity: 0.1,
-  },
-  verifyButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
   },
 });

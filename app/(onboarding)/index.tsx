@@ -1,14 +1,14 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -94,9 +94,14 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       {/* Skip Button */}
       {currentIndex < slides.length - 1 && (
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
+        <View style={styles.skipButton}>
+          <AnimatedButton
+            title="Skip"
+            variant="ghost"
+            size="small"
+            onPress={handleSkip}
+          />
+        </View>
       )}
 
       {/* Slides */}
@@ -158,27 +163,15 @@ export default function OnboardingScreen() {
         </View>
 
         {/* Next/Get Started Button */}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            { backgroundColor: slides[currentIndex].color },
-          ]}
+        <AnimatedButton
+          title={currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
+          icon={currentIndex === slides.length - 1 ? 'checkmark-circle' : 'arrow-forward'}
+          iconPosition="right"
           onPress={scrollTo}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>
-            {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
-          </Text>
-          <Ionicons
-            name={
-              currentIndex === slides.length - 1
-                ? 'checkmark-circle'
-                : 'arrow-forward'
-            }
-            size={20}
-            color="#fff"
-          />
-        </TouchableOpacity>
+          fullWidth
+          size="large"
+          style={{ backgroundColor: slides[currentIndex].color }}
+        />
       </View>
     </View>
   );
@@ -194,13 +187,6 @@ const styles = StyleSheet.create({
     top: 60,
     right: 20,
     zIndex: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  skipText: {
-    fontSize: 16,
-    color: '#636E72',
-    fontWeight: '600',
   },
   slide: {
     width,
@@ -245,23 +231,5 @@ const styles = StyleSheet.create({
   dot: {
     height: 8,
     borderRadius: 4,
-  },
-  button: {
-    flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    gap: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
   },
 });

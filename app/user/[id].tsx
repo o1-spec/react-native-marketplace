@@ -1,14 +1,15 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 // Mock user data - replace with API call
@@ -204,28 +205,21 @@ export default function UserProfileScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.messageButton} onPress={handleMessage}>
-              <Ionicons name="chatbubble-outline" size={20} color="#fff" />
-              <Text style={styles.messageButtonText}>Message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.followButton, isFollowing && styles.followingButton]}
+            <AnimatedButton
+              title="Message"
+              icon="chatbubble-outline"
+              onPress={handleMessage}
+              size="large"
+              style={styles.messageButton}
+            />
+            <AnimatedButton
+              title={isFollowing ? 'Following' : 'Follow'}
+              icon={isFollowing ? 'checkmark' : 'person-add-outline'}
+              variant={isFollowing ? 'outline' : 'secondary'}
               onPress={handleFollow}
-            >
-              <Ionicons
-                name={isFollowing ? 'checkmark' : 'person-add-outline'}
-                size={20}
-                color={isFollowing ? '#4ECDC4' : '#2D3436'}
-              />
-              <Text
-                style={[
-                  styles.followButtonText,
-                  isFollowing && styles.followingButtonText,
-                ]}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
+              size="large"
+              style={isFollowing ? styles.followingButton : undefined}
+            />
           </View>
         </View>
 
@@ -420,47 +414,9 @@ const styles = StyleSheet.create({
   },
   messageButton: {
     flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#2D3436',
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  messageButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  followButton: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   followingButton: {
-    backgroundColor: '#E5F9F8',
     borderColor: '#4ECDC4',
-  },
-  followButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3436',
-  },
-  followingButtonText: {
-    color: '#4ECDC4',
   },
   infoSection: {
     backgroundColor: '#fff',

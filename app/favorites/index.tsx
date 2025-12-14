@@ -1,14 +1,15 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import ProductCard from '@/components/ProductCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 // Mock favorites data
@@ -173,12 +174,12 @@ export default function FavoritesScreen() {
       <Text style={styles.emptyText}>
         Save items you love by tapping the heart icon on any product
       </Text>
-      <TouchableOpacity
-        style={styles.browseButton}
+      <AnimatedButton
+        title="Start Browsing"
+        icon="compass"
         onPress={() => router.push('/(tabs)')}
-      >
-        <Text style={styles.browseButtonText}>Start Browsing</Text>
-      </TouchableOpacity>
+        size="large"
+      />
     </View>
   );
 
@@ -408,21 +409,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
-  },
-  browseButton: {
-    backgroundColor: '#2D3436',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

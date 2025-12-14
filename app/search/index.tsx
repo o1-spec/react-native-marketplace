@@ -1,13 +1,14 @@
+import AnimatedButton from '@/components/AnimatedButton';
 import ProductCard from '@/components/ProductCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 // Mock products data
@@ -233,12 +234,12 @@ export default function SearchResultsScreen() {
       <Text style={styles.emptyText}>
         Try adjusting your filters or browse other categories
       </Text>
-      <TouchableOpacity
-        style={styles.browseButton}
+      <AnimatedButton
+        title="Browse All"
+        icon="grid"
         onPress={() => router.push('/(tabs)/explore')}
-      >
-        <Text style={styles.browseButtonText}>Browse All</Text>
-      </TouchableOpacity>
+        size="large"
+      />
     </View>
   );
 
@@ -405,21 +406,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
-  },
-  browseButton: {
-    backgroundColor: '#2D3436',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-    shadowColor: '#2D3436',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
