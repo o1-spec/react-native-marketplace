@@ -1,9 +1,12 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import LongPressMenu from '@/components/LongPressMenu';
 import MessageCardSkeleton from '@/components/MessageCardSkeleton';
+import SwipeToDelete from '@/components/SwipeToDelete';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Image,
   StyleSheet,
@@ -103,12 +106,45 @@ export default function MessagesScreen() {
       conv.productTitle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleDeleteConversation = (id: string) => {
+    setConversations(conversations.filter((conv) => conv.id !== id));
+  };
+
+  const handleArchiveConversation = (id: string) => {
+    Alert.alert('Archived', 'Conversation archived successfully');
+  };
+
+  const handleMuteConversation = (id: string) => {
+    Alert.alert('Muted', 'Conversation muted');
+  };
+
   const renderConversation = ({ item }: any) => (
-    <TouchableOpacity
-      style={styles.conversationCard}
-      onPress={() => router.push(`/chat/${item.userId}`)}
-      activeOpacity={0.7}
-    >
+    <SwipeToDelete onDelete={() => handleDeleteConversation(item.id)}>
+      <LongPressMenu
+        actions={[
+          {
+            icon: 'archive-outline',
+            label: 'Archive',
+            onPress: () => handleArchiveConversation(item.id),
+          },
+          {
+            icon: 'notifications-off-outline',
+            label: 'Mute',
+            onPress: () => handleMuteConversation(item.id),
+          },
+          {
+            icon: 'trash-outline',
+            label: 'Delete',
+            onPress: () => handleDeleteConversation(item.id),
+            color: '#FF6B6B',
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.conversationCard}
+          onPress={() => router.push(`/chat/${item.userId}`)}
+          activeOpacity={0.7}
+        >
       {/* User Avatar */}
       <View style={styles.avatarContainer}>
         <Image source={{ uri: item.userAvatar }} style={styles.avatar} />
@@ -151,7 +187,9 @@ export default function MessagesScreen() {
           )}
         </View>
       </View>
-    </TouchableOpacity>
+        </TouchableOpacity>
+      </LongPressMenu>
+    </SwipeToDelete>
   );
 
   const renderEmptyState = () => (

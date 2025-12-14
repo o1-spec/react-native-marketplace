@@ -3,17 +3,18 @@ import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import { useState } from 'react';
 import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
 } from 'react-native-reanimated';
+import HeartExplosion from './HeartExplosion';
 
 interface ProductCardProps {
   id: string;
@@ -41,6 +42,7 @@ export default function ProductCard({
   const router = useRouter();
   const scale = useSharedValue(1);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showExplosion, setShowExplosion] = useState(false);
 
   // Card press animation
   const animatedCardStyle = useAnimatedStyle(() => ({
@@ -67,6 +69,10 @@ export default function ProductCard({
 
   const handleFavoritePress = (e: any) => {
     e.stopPropagation();
+    if (!isFavorite) {
+      setShowExplosion(true);
+      setTimeout(() => setShowExplosion(false), 1000);
+    }
     onFavoritePress?.();
   };
 
@@ -185,6 +191,13 @@ export default function ProductCard({
                 </MotiView>
               </TouchableOpacity>
             </MotiView>
+
+            {/* Heart Explosion Effect */}
+            {showExplosion && (
+              <View style={styles.explosionContainer}>
+                <HeartExplosion onComplete={() => setShowExplosion(false)} />
+              </View>
+            )}
           </View>
 
           {/* Info Section */}
@@ -329,5 +342,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#2D3436',
+  },
+  explosionContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
   },
 });
