@@ -20,6 +20,7 @@ export default function ProductLayout() {
         name="edit/[id]" 
         options={{ 
           title: 'Edit Listing',
+          headerShown: false,
           headerBackTitle: 'Back',
           ...ScreenTransitions.slideFromRight,
         }} 
