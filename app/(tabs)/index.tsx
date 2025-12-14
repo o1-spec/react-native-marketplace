@@ -81,6 +81,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     // Simulate initial data load
@@ -105,10 +106,57 @@ export default function HomeScreen() {
     );
   };
 
+  const handleCategoryPress = (category: any) => {
+    router.push({
+      pathname: '/search',
+      params: {
+        type: 'category',
+        value: category.name,
+        query: searchQuery,
+      },
+    });
+  };
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      router.push({
+        pathname: '/search',
+        params: { 
+          query: searchQuery.trim(),
+          type: 'search'
+        }
+      });
+    }
+  };
+
+  const handleFilterPress = () => {
+    router.push('/(tabs)/explore');
+  };
+
+  const handleSeeAllCategories = () => {
+    router.push({
+      pathname: '/search',
+      params: { 
+        type: 'all-categories',
+        value: 'all'
+      }
+    });
+  };
+
+  const handleSeeAllFeatured = () => {
+    router.push({
+      pathname: '/search',
+      params: { 
+        type: 'featured',
+        value: 'all'
+      }
+    });
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
-<View style={styles.header}>
+      <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hello 👋</Text>
           <Text style={styles.headerTitle}>Find Your Perfect Item</Text>
@@ -131,8 +179,15 @@ export default function HomeScreen() {
           style={styles.searchInput}
           placeholder="Search products, brands..."
           placeholderTextColor="#B2BEC3"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearch}
+          returnKeyType="search"
         />
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={handleFilterPress}
+        >
           <Ionicons name="options-outline" size={20} color="#2D3436" />
         </TouchableOpacity>
       </View>
@@ -148,7 +203,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Categories</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleSeeAllCategories}>
               <Text style={styles.seeAll}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -165,11 +220,7 @@ export default function HomeScreen() {
                   styles.categoryCard,
                   selectedCategory === category.id && styles.categoryCardActive,
                 ]}
-                onPress={() =>
-                  setSelectedCategory(
-                    selectedCategory === category.id ? null : category.id
-                  )
-                }
+                onPress={() => handleCategoryPress(category)}
               >
                 <View
                   style={[
@@ -189,7 +240,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Featured Products</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleSeeAllFeatured}>
               <Text style={styles.seeAll}>See All</Text>
             </TouchableOpacity>
           </View>
