@@ -125,31 +125,6 @@ export default function ProductCard({
               onLoad={() => setImageLoaded(true)}
             />
 
-            {/* Condition Badge with animation */}
-            {condition === 'New' && (
-              <MotiView
-                from={{
-                  scale: 0,
-                  opacity: 0,
-                  translateX: -20,
-                }}
-                animate={{
-                  scale: 1,
-                  opacity: 1,
-                  translateX: 0,
-                }}
-                transition={{
-                  type: 'spring',
-                  delay: 200 + index * 100,
-                  damping: 15,
-                }}
-              >
-                <View style={styles.conditionBadge}>
-                  <Text style={styles.conditionText}>NEW</Text>
-                </View>
-              </MotiView>
-            )}
-
             {/* Favorite Button with animation */}
             <MotiView
               from={{
@@ -217,7 +192,7 @@ export default function ProductCard({
               </Text>
             </MotiView>
 
-            {/* Location with fade-in */}
+            {/* Condition and Location with fade-in */}
             <MotiView
               from={{ opacity: 0, translateX: -10 }}
               animate={{ opacity: 1, translateX: 0 }}
@@ -227,11 +202,16 @@ export default function ProductCard({
                 delay: 450 + index * 100,
               }}
             >
-              <View style={styles.locationContainer}>
-                <Ionicons name="location-outline" size={14} color="#636E72" />
-                <Text style={styles.location} numberOfLines={1}>
-                  {location}
-                </Text>
+              <View style={styles.conditionLocationContainer}>
+                <View style={styles.conditionBadge}>
+                  <Text style={styles.conditionText}>{condition}</Text>
+                </View>
+                <View style={styles.locationContainer}>
+                  <Ionicons name="location-outline" size={14} color="#636E72" />
+                  <Text style={styles.location} numberOfLines={1}>
+                    {location}
+                  </Text>
+                </View>
               </View>
             </MotiView>
 
@@ -281,26 +261,6 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  conditionBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: '#4ECDC4',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    shadowColor: '#4ECDC4',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  conditionText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
   favoriteButton: {
     position: 'absolute',
     top: 12,
@@ -324,13 +284,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2D3436',
-    marginBottom: 6,
+    marginBottom: 8,
     lineHeight: 22,
+  },
+  conditionLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  conditionBadge: {
+    backgroundColor: '#E5F9F8',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  conditionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4ECDC4',
+    textTransform: 'uppercase',
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    flex: 1,
     gap: 4,
   },
   location: {
