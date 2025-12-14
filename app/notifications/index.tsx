@@ -120,6 +120,8 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState(mockNotifications);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
 
   useEffect(() => {
     // Simulate loading notifications
@@ -154,30 +156,46 @@ export default function NotificationsScreen() {
   };
 
   const handleNotificationPress = (notification: Notification) => {
-    // Mark as read
-    setNotifications(
-      notifications.map((n) =>
-        n.id === notification.id ? { ...n, read: true } : n
-      )
-    );
+    if (selectionMode) {
+      // Toggle selection
+      if (selectedNotifications.includes(notification.id)) {
+        setSelectedNotifications(selectedNotifications.filter(id => id !== notification.id));
+      } else {
+        setSelectedNotifications([...selectedNotifications, notification.id]);
+      }
+    } else {
+      // Mark as read and navigate
+      setNotifications(
+        notifications.map((n) =>
+          n.id === notification.id ? { ...n, read: true } : n
+        )
+      );
 
-    // Navigate based on type
-    switch (notification.type) {
-      case 'message':
-        router.push(`/chat/${notification.actionId}`);
-        break;
-      case 'offer':
-      case 'like':
-      case 'purchase':
-        router.push(`/product/${notification.actionId}`);
-        break;
-      case 'follow':
-      case 'review':
-        router.push(`/user/${notification.actionId}`);
-        break;
-      case 'system':
-        Alert.alert(notification.title, notification.message);
-        break;
+      // Navigate based on type
+      switch (notification.type) {
+        case 'message':
+          router.push(`/chat/${notification.actionId}`);
+          break;
+        case 'offer':
+        case 'like':
+        case 'purchase':
+          router.push(`/product/${notification.actionId}`);
+          break;
+        case 'follow':
+        case 'review':
+          router.push(`/user/${notification.actionId}`);
+          break;
+        case 'system':
+          Alert.alert(notification.title, notification.message);
+          break;
+      }
+    }
+  };
+
+  const handleLongPress = (notification: Notification) => {
+    if (!selectionMode) {
+      setSelectionMode(true);
+      setSelectedNotifications([notification.id]);
     }
   };
 
@@ -201,6 +219,39 @@ export default function NotificationsScreen() {
     );
   };
 
+  const deleteSelected = () => {
+    Alert.alert(
+      'Delete Selected',
+      `Are you sure you want to delete ${selectedNotifications.length} notification${selectedNotifications.length > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setNotifications(notifications.filter(n => !selectedNotifications.includes(n.id)));
+            setSelectedNotifications([]);
+            setSelectionMode(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const selectAll = () => {
+    const allIds = filteredNotifications.map(n => n.id);
+    setSelectedNotifications(allIds);
+  };
+
+  const deselectAll = () => {
+    setSelectedNotifications([]);
+  };
+
+  const cancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedNotifications([]);
+  };
+
   const filteredNotifications =
     filter === 'all'
       ? notifications
@@ -208,14 +259,29 @@ export default function NotificationsScreen() {
 
   const renderNotification = (notification: Notification) => {
     const icon = getNotificationIcon(notification.type);
+    const isSelected = selectedNotifications.includes(notification.id);
 
     return (
       <TouchableOpacity
         key={notification.id}
-        style={[styles.notificationCard, !notification.read && styles.unreadCard]}
+        style={[
+          styles.notificationCard, 
+          !notification.read && styles.unreadCard,
+          selectionMode && isSelected && styles.selectedCard,
+        ]}
         onPress={() => handleNotificationPress(notification)}
+        onLongPress={() => handleLongPress(notification)}
         activeOpacity={0.7}
       >
+        {/* Selection Checkbox */}
+        {selectionMode && (
+          <View style={styles.checkboxContainer}>
+            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+              {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </View>
+          </View>
+        )}
+
         {/* Left Side - Avatar/Icon */}
         <View style={styles.notificationLeft}>
           {notification.avatar ? (
@@ -282,7 +348,7 @@ export default function NotificationsScreen() {
         </View>
 
         {/* Right - Indicator */}
-        {!notification.read && <View style={styles.unreadDot} />}
+        {!notification.read && !selectionMode && <View style={styles.unreadDot} />}
       </TouchableOpacity>
     );
   };
@@ -293,58 +359,90 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => selectionMode ? cancelSelection() : router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#2D3436" />
+          <Ionicons 
+            name={selectionMode ? "close" : "arrow-back"} 
+            size={24} 
+            color="#2D3436" 
+          />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          {unreadCount > 0 && (
+          <Text style={styles.headerTitle}>
+            {selectionMode ? `${selectedNotifications.length} Selected` : 'Notifications'}
+          </Text>
+          {!selectionMode && unreadCount > 0 && (
             <View style={styles.headerBadge}>
               <Text style={styles.headerBadgeText}>{unreadCount}</Text>
             </View>
           )}
         </View>
-        <TouchableOpacity style={styles.moreButton} onPress={clearAll}>
-          <Ionicons name="ellipsis-horizontal" size={24} color="#2D3436" />
-        </TouchableOpacity>
+        {selectionMode ? (
+          <TouchableOpacity 
+            style={styles.moreButton} 
+            onPress={selectedNotifications.length === filteredNotifications.length ? deselectAll : selectAll}
+          >
+            <Text style={styles.selectAllText}>
+              {selectedNotifications.length === filteredNotifications.length ? 'Deselect' : 'Select All'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.moreButton} onPress={clearAll}>
+            <Ionicons name="trash-outline" size={24} color="#2D3436" />
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Selection Mode Actions */}
+      {selectionMode && selectedNotifications.length > 0 && (
+        <View style={styles.selectionActions}>
+          <AnimatedButton
+            title={`Delete ${selectedNotifications.length}`}
+            icon="trash"
+            variant="danger"
+            onPress={deleteSelected}
+            fullWidth
+          />
+        </View>
+      )}
 
       {/* Filter Tabs */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterTab, filter === 'all' && styles.activeFilterTab]}
-          onPress={() => setFilter('all')}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              filter === 'all' && styles.activeFilterText,
-            ]}
+      {!selectionMode && (
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={[styles.filterTab, filter === 'all' && styles.activeFilterTab]}
+            onPress={() => setFilter('all')}
           >
-            All ({notifications.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterTab,
-            filter === 'unread' && styles.activeFilterTab,
-          ]}
-          onPress={() => setFilter('unread')}
-        >
-          <Text
+            <Text
+              style={[
+                styles.filterText,
+                filter === 'all' && styles.activeFilterText,
+              ]}
+            >
+              All ({notifications.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[
-              styles.filterText,
-              filter === 'unread' && styles.activeFilterText,
+              styles.filterTab,
+              filter === 'unread' && styles.activeFilterTab,
             ]}
+            onPress={() => setFilter('unread')}
           >
-            Unread ({unreadCount})
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <Text
+              style={[
+                styles.filterText,
+                filter === 'unread' && styles.activeFilterText,
+              ]}
+            >
+              Unread ({unreadCount})
+            </Text>
+            </TouchableOpacity>
+        </View>
+      )}
 
       {/* Mark All as Read Button */}
-      {unreadCount > 0 && (
+      {!selectionMode && unreadCount > 0 && (
         <View style={styles.markAllButtonContainer}>
           <AnimatedButton
             title="Mark all as read"
@@ -454,6 +552,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  selectAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4ECDC4',
+  },
+  selectionActions: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
   filterContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -507,6 +617,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FEFF',
     borderLeftWidth: 3,
     borderLeftColor: '#4ECDC4',
+  },
+  selectedCard: {
+    backgroundColor: '#E5F9F8',
+    borderLeftWidth: 3,
+    borderLeftColor: '#4ECDC4',
+  },
+  checkboxContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 24,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#4ECDC4',
+    borderColor: '#4ECDC4',
   },
   notificationLeft: {
     position: 'relative',
