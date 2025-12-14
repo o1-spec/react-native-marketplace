@@ -23,13 +23,68 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false); // ✅ ADD THIS
 
+  // Add error state
+  const [error, setError] = useState("");
+
+  // Clear error when user types
+  const handleNameChange = (text: string) => {
+    setName(text);
+    if (error) setError("");
+  };
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (error) setError("");
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (error) setError("");
+  };
+
+  const handleConfirmPasswordChange = (text: string) => {
+    setConfirmPassword(text);
+    if (error) setError("");
+  };
+
   const handleRegister = async () => {
-    // ✅ Make async
-    setIsSubmitting(true); // ✅ ADD
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // ✅ ADD - Simulate API
-    console.log("Register:", { name, email, password });
-    setIsSubmitting(false); // ✅ ADD
-    router.push("/(auth)/verify-email");
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      // Validate form
+      if (name.length < 2) {
+        throw new Error("Name must be at least 2 characters");
+      }
+      if (!email.includes("@")) {
+        throw new Error("Please enter a valid email address");
+      }
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Simulate API errors
+      if (email === "taken@test.com") {
+        throw new Error("This email is already registered");
+      }
+
+      console.log("Register:", { name, email, password });
+      router.push("/(auth)/verify-email");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isFormValid =
@@ -158,12 +213,29 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
           {/* Terms */}
           <Text style={styles.terms}>
             By signing up, you agree to our{" "}
-            <Text style={styles.link}>Terms</Text> and{" "}
-            <Text style={styles.link}>Privacy Policy</Text>
+            <Text
+              style={styles.link}
+              onPress={() => router.push("/(auth)/terms")}
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.link}
+              onPress={() => router.push("/(auth)/privacy")}
+            >
+              Privacy Policy
+            </Text>
           </Text>
 
           {/* Register Button */}
@@ -358,5 +430,22 @@ const styles = StyleSheet.create({
   },
   buttonSpacing: {
     marginBottom: 16,
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF5F5",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FEB2B2",
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#C53030",
+    lineHeight: 20,
   },
 });

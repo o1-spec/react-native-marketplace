@@ -19,13 +19,41 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (error) setError("");
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (error) setError("");
+  };
 
   const handleLogin = async () => {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // ✅ ADD - Simulate API
-    console.log("Login:", { email, password });
-    setIsSubmitting(false); // ✅ ADD
-    router.replace("/(tabs)");
+    setError("");
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (email === "error@test.com") {
+        throw new Error("Invalid email or password");
+      }
+      if (password === "wrong") {
+        throw new Error("Incorrect password");
+      }
+
+      console.log("Login:", { email, password });
+      router.replace("/(tabs)");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Login failed. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isFormValid = email.length > 0 && password.length >= 6;
@@ -80,7 +108,7 @@ export default function LoginScreen() {
                 placeholder="Email Address"
                 placeholderTextColor="#B2BEC3"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={handleEmailChange}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -96,7 +124,7 @@ export default function LoginScreen() {
                 placeholder="Password"
                 placeholderTextColor="#B2BEC3"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={handlePasswordChange}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
@@ -117,6 +145,12 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
           {/* Login Button */}
           <View style={styles.buttonSpacing}>
             <AnimatedButton
@@ -308,5 +342,22 @@ const styles = StyleSheet.create({
   },
   buttonSpacing: {
     marginBottom: 16,
+  },
+   errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FEB2B2',
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#C53030',
+    lineHeight: 20,
   },
 });

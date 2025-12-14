@@ -1,8 +1,8 @@
-import AnimatedButton from '@/components/AnimatedButton';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import AnimatedButton from "@/components/AnimatedButton";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   Alert,
   Image,
@@ -14,42 +14,42 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
 const categories = [
-  { id: '1', name: 'Electronics', icon: 'laptop-outline' },
-  { id: '2', name: 'Fashion', icon: 'shirt-outline' },
-  { id: '3', name: 'Home', icon: 'home-outline' },
-  { id: '4', name: 'Sports', icon: 'basketball-outline' },
-  { id: '5', name: 'Books', icon: 'book-outline' },
-  { id: '6', name: 'Toys', icon: 'game-controller-outline' },
-  { id: '7', name: 'Vehicles', icon: 'car-outline' },
-  { id: '8', name: 'Other', icon: 'ellipsis-horizontal-outline' },
+  { id: "1", name: "Electronics", icon: "laptop-outline" },
+  { id: "2", name: "Fashion", icon: "shirt-outline" },
+  { id: "3", name: "Home", icon: "home-outline" },
+  { id: "4", name: "Sports", icon: "basketball-outline" },
+  { id: "5", name: "Books", icon: "book-outline" },
+  { id: "6", name: "Toys", icon: "game-controller-outline" },
+  { id: "7", name: "Vehicles", icon: "car-outline" },
+  { id: "8", name: "Other", icon: "ellipsis-horizontal-outline" },
 ];
 
-const conditions = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
+const conditions = ["New", "Like New", "Good", "Fair", "Poor"];
 
 export default function CreateListingScreen() {
   const router = useRouter();
   const [images, setImages] = useState<string[]>([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
-  const [condition, setCondition] = useState('Good');
-  const [location, setLocation] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [condition, setCondition] = useState("Good");
+  const [location, setLocation] = useState("");
   const [isPosting, setIsPosting] = useState(false);
 
   const pickImages = async () => {
     if (images.length >= 5) {
-      Alert.alert('Maximum Images', 'You can only upload up to 5 images');
+      Alert.alert("Maximum Images", "You can only upload up to 5 images");
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photos');
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your photos");
       return;
     }
 
@@ -70,14 +70,14 @@ export default function CreateListingScreen() {
 
   const takePhoto = async () => {
     if (images.length >= 5) {
-      Alert.alert('Maximum Images', 'You can only upload up to 5 images');
+      Alert.alert("Maximum Images", "You can only upload up to 5 images");
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your camera');
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your camera");
       return;
     }
 
@@ -97,39 +97,39 @@ export default function CreateListingScreen() {
   };
 
   const handleImageOptions = () => {
-    Alert.alert('Add Photo', 'Choose an option', [
-      { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Choose from Library', onPress: pickImages },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Add Photo", "Choose an option", [
+      { text: "Take Photo", onPress: takePhoto },
+      { text: "Choose from Library", onPress: pickImages },
+      { text: "Cancel", style: "cancel" },
     ]);
   };
 
   const handlePost = async () => {
     // Validation
     if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title for your listing');
+      Alert.alert("Missing Title", "Please enter a title for your listing");
       return;
     }
     if (!price.trim()) {
-      Alert.alert('Missing Price', 'Please enter a price');
+      Alert.alert("Missing Price", "Please enter a price");
       return;
     }
     if (images.length === 0) {
-      Alert.alert('Missing Images', 'Please add at least one photo');
+      Alert.alert("Missing Images", "Please add at least one photo");
       return;
     }
     if (!category) {
-      Alert.alert('Missing Category', 'Please select a category');
+      Alert.alert("Missing Category", "Please select a category");
       return;
     }
 
     setIsPosting(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // TODO: Upload to backend
-      console.log('Posting listing:', {
+      console.log("Posting listing:", {
         title,
         description,
         price,
@@ -139,29 +139,25 @@ export default function CreateListingScreen() {
         images,
       });
 
-      Alert.alert(
-        'Success!',
-        'Your listing has been posted',
-        [
+      Alert.alert("Success!", "Your listing has been posted", [
         {
-          text: 'OK',
+          text: "OK",
           onPress: () => {
             // Reset form
             setImages([]);
-            setTitle('');
-            setDescription('');
-            setPrice('');
-            setCategory('');
-            setCondition('Good');
-            setLocation('');
+            setTitle("");
+            setDescription("");
+            setPrice("");
+            setCategory("");
+            setCondition("Good");
+            setLocation("");
             // Navigate to home
-            router.push('/(tabs)');
+            router.push("/(tabs)");
           },
         },
-      ]
-    );
+      ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to post listing. Please try again.');
+      Alert.alert("Error", "Failed to post listing. Please try again.");
     } finally {
       setIsPosting(false);
     }
@@ -170,7 +166,7 @@ export default function CreateListingScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -298,7 +294,7 @@ export default function CreateListingScreen() {
                 <Ionicons
                   name={cat.icon as any}
                   size={24}
-                  color={category === cat.name ? '#4ECDC4' : '#636E72'}
+                  color={category === cat.name ? "#4ECDC4" : "#636E72"}
                 />
                 <Text
                   style={[
@@ -361,16 +357,23 @@ export default function CreateListingScreen() {
           </View>
         </View>
 
-        {/* Post Button */}
-        <AnimatedButton
-          title="Post Listing"
-          icon="checkmark-circle"
-          onPress={handlePost}
-          loading={isPosting}
-          disabled={isPosting || !title.trim() || !price.trim() || images.length === 0 || !category}
-          fullWidth
-          size="large"
-        />
+        <View style={styles.section}>
+          <AnimatedButton
+            title="Post Listing"
+            icon="checkmark-circle"
+            onPress={handlePost}
+            loading={isPosting}
+            disabled={
+              isPosting ||
+              !title.trim() ||
+              !price.trim() ||
+              images.length === 0 ||
+              !category
+            }
+            fullWidth
+            size="large"
+          />
+        </View>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
@@ -382,44 +385,44 @@ export default function CreateListingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
   },
   content: {
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     marginTop: 8,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
     marginBottom: 12,
   },
   required: {
-    color: '#FF6B6B',
+    color: "#FF6B6B",
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: '#636E72',
+    color: "#636E72",
     marginBottom: 16,
   },
   imagesContainer: {
@@ -430,114 +433,114 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E5EA',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    borderColor: "#E5E5EA",
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
   },
   addPhotoText: {
     fontSize: 13,
-    color: '#B2BEC3',
+    color: "#B2BEC3",
     marginTop: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   imagePreview: {
-    position: 'relative',
+    position: "relative",
     width: 120,
     height: 120,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   previewImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   coverBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(78, 205, 196, 0.9)',
+    backgroundColor: "rgba(78, 205, 196, 0.9)",
     paddingVertical: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   coverText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   removeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
   },
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   textArea: {
     height: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   characterCount: {
     fontSize: 12,
-    color: '#B2BEC3',
-    textAlign: 'right',
+    color: "#B2BEC3",
+    textAlign: "right",
     marginTop: 8,
   },
   priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     paddingHorizontal: 16,
   },
   currencySymbol: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
     marginRight: 8,
   },
   priceInput: {
     flex: 1,
     paddingVertical: 16,
     fontSize: 20,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
   },
   categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   categoryCard: {
-    width: '22%',
+    width: "22%",
     aspectRatio: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 8,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   categoryCardActive: {
-    backgroundColor: '#E5F9F8',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#E5F9F8",
+    borderColor: "#4ECDC4",
   },
   categoryText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#636E72',
+    fontWeight: "600",
+    color: "#636E72",
   },
   categoryTextActive: {
-    color: '#4ECDC4',
+    color: "#4ECDC4",
   },
   conditionsContainer: {
     gap: 8,
@@ -546,26 +549,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   conditionChipActive: {
-    backgroundColor: '#E5F9F8',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#E5F9F8",
+    borderColor: "#4ECDC4",
   },
   conditionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#636E72',
+    fontWeight: "600",
+    color: "#636E72",
   },
   conditionTextActive: {
-    color: '#4ECDC4',
+    color: "#4ECDC4",
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -574,7 +577,7 @@ const styles = StyleSheet.create({
   locationInput: {
     flex: 1,
     fontSize: 15,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   bottomSpacing: {
     height: 40,
