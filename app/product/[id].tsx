@@ -1,7 +1,8 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -47,6 +48,16 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading product details
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, [id]);
 
   const handleShare = async () => {
     try {
@@ -63,6 +74,19 @@ export default function ProductDetailScreen() {
     // Navigate to chat
     router.push(`/chat/${mockProduct.seller.id}`);
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#2D3436" />
+          </TouchableOpacity>
+        </View>
+        <ProductDetailSkeleton />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

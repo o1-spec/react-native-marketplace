@@ -1,7 +1,8 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import NotificationCardSkeleton from '@/components/NotificationCardSkeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -118,6 +119,16 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const [notifications, setNotifications] = useState(mockNotifications);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading notifications
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1600);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -346,37 +357,45 @@ export default function NotificationsScreen() {
       )}
 
       {/* Notifications List */}
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          filteredNotifications.length === 0 && styles.emptyContainer
-        }
-      >
-        {filteredNotifications.length > 0 ? (
-          filteredNotifications.map(renderNotification)
-        ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons
-                name="notifications-outline"
-                size={64}
-                color="#B2BEC3"
-              />
+      {isLoading ? (
+        <View style={styles.skeletonContainer}>
+          {Array.from({ length: 8 }).map((_, index) => (
+            <NotificationCardSkeleton key={`skeleton-${index}`} />
+          ))}
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={
+            filteredNotifications.length === 0 && styles.emptyContainer
+          }
+        >
+          {filteredNotifications.length > 0 ? (
+            filteredNotifications.map(renderNotification)
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={64}
+                  color="#B2BEC3"
+                />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {filter === 'all' ? 'No Notifications' : 'No Unread Notifications'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {filter === 'all'
+                  ? 'You\'re all caught up! Check back later for updates.'
+                  : 'All your notifications have been read.'}
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>
-              {filter === 'all' ? 'No Notifications' : 'No Unread Notifications'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {filter === 'all'
-                ? 'You\'re all caught up! Check back later for updates.'
-                : 'All your notifications have been read.'}
-            </Text>
-          </View>
-        )}
+          )}
 
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -583,6 +602,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   bottomSpacing: {
-    height: 40,
+    height: 20,
+  },
+  skeletonContainer: {
+    padding: 16,
+    gap: 12,
   },
 });

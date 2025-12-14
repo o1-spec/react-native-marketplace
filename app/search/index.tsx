@@ -1,8 +1,9 @@
 import AnimatedButton from '@/components/AnimatedButton';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -94,6 +95,17 @@ export default function SearchResultsScreen() {
   
   const [sortBy, setSortBy] = useState<'relevant' | 'price-low' | 'price-high' | 'newest'>('relevant');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading search results
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [filterType, filterValue, sortBy]);
 
   // Get filtered products based on filter type
   const getFilteredProducts = () => {
@@ -263,33 +275,43 @@ export default function SearchResultsScreen() {
       </View>
 
       {/* Results */}
-      <FlatList
-        data={products}
-        renderItem={({ item }) => (
-          <View style={styles.productCardWrapper}>
-            <ProductCard
-              id={item.id}
-              title={item.title}
-              price={item.price}
-              image={item.image}
-              location={item.location}
-              condition={item.condition as 'New' | 'Used'}
-              isFavorite={favorites.includes(item.id)}
-              onFavoritePress={() => handleFavoriteToggle(item.id)}
-            />
-          </View>
-        )}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        contentContainerStyle={[
-          styles.listContent,
-          products.length === 0 && styles.emptyContainer,
-        ]}
-        ListHeaderComponent={products.length > 0 ? renderSortButton : null}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-        columnWrapperStyle={products.length > 0 ? styles.row : undefined}
-      />
+      {isLoading ? (
+        <View style={styles.skeletonGrid}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <View key={`skeleton-${index}`} style={styles.productCardWrapper}>
+              <ProductCardSkeleton />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          renderItem={({ item }) => (
+            <View style={styles.productCardWrapper}>
+              <ProductCard
+                id={item.id}
+                title={item.title}
+                price={item.price}
+                image={item.image}
+                location={item.location}
+                condition={item.condition as 'New' | 'Used'}
+                isFavorite={favorites.includes(item.id)}
+                onFavoritePress={() => handleFavoriteToggle(item.id)}
+              />
+            </View>
+          )}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={[
+            styles.listContent,
+            products.length === 0 && styles.emptyContainer,
+          ]}
+          ListHeaderComponent={products.length > 0 ? renderSortButton : null}
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+          columnWrapperStyle={products.length > 0 ? styles.row : undefined}
+        />
+      )}
     </View>
   );
 }
@@ -406,5 +428,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
+  },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 16,
+    gap: 12,
+    justifyContent: 'space-between',
   },
 });

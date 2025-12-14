@@ -1,7 +1,8 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import MessageCardSkeleton from '@/components/MessageCardSkeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -85,6 +86,16 @@ export default function MessagesScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState(mockConversations);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading conversations
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const filteredConversations = conversations.filter(
     (conv) =>
@@ -191,16 +202,24 @@ export default function MessagesScreen() {
       )}
 
       {/* Conversations List */}
-      <FlatList
-        data={filteredConversations}
-        renderItem={renderConversation}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={
-          filteredConversations.length === 0 && styles.emptyContainer
-        }
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={styles.skeletonContainer}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <MessageCardSkeleton key={`skeleton-${index}`} />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={filteredConversations}
+          renderItem={renderConversation}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={
+            filteredConversations.length === 0 && styles.emptyContainer
+          }
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -388,6 +407,10 @@ const styles = StyleSheet.create({
     color: '#636E72',
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: 32,
+  },
+  skeletonContainer: {
+    padding: 16,
+    gap: 12,
   },
 });

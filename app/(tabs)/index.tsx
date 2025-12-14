@@ -1,7 +1,8 @@
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -76,8 +77,18 @@ const categories = [
 export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Simulate initial data load
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -183,15 +194,25 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.productsGrid}>
-            {mockProducts.map((product) => (
-              <View key={product.id} style={styles.productCardWrapper}>
-                <ProductCard
-                  {...product}
-                  isFavorite={favorites.includes(product.id)}
-                  onFavoritePress={() => toggleFavorite(product.id)}
-                />
-              </View>
-            ))}
+            {isLoading ? (
+              // Show skeleton loaders while loading
+              Array.from({ length: 6 }).map((_, index) => (
+                <View key={`skeleton-${index}`} style={styles.productCardWrapper}>
+                  <ProductCardSkeleton />
+                </View>
+              ))
+            ) : (
+              // Show actual products when loaded
+              mockProducts.map((product) => (
+                <View key={product.id} style={styles.productCardWrapper}>
+                  <ProductCard
+                    {...product}
+                    isFavorite={favorites.includes(product.id)}
+                    onFavoritePress={() => toggleFavorite(product.id)}
+                  />
+                </View>
+              ))
+            )}
           </View>
         </View>
 
