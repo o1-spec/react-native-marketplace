@@ -1,10 +1,11 @@
 import { ScreenTransitions } from '@/constants/transitions';
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 
 export default function RootLayout() {
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
       <Stack
         screenOptions={{
@@ -18,7 +19,7 @@ export default function RootLayout() {
           name="index" 
           options={{ 
             headerShown: false,
-            animation: 'fade',
+            ...ScreenTransitions.fade,
           }} 
         />
         <Stack.Screen 
@@ -42,6 +43,7 @@ export default function RootLayout() {
             ...ScreenTransitions.fade,
           }} 
         />
+        
         <Stack.Screen 
           name="modal" 
           options={{ 
@@ -51,7 +53,65 @@ export default function RootLayout() {
             ...ScreenTransitions.bottomSheet,
           }} 
         />
+        
+        {/* Add missing screens with transitions */}
+        <Stack.Screen 
+          name="chat/[id]" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideFromRight,
+          }} 
+        />
+        <Stack.Screen 
+          name="product/[id]" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.zoomIn,
+          }} 
+        />
+        <Stack.Screen 
+          name="user/[id]" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideAndFade,
+          }} 
+        />
+        <Stack.Screen 
+          name="search" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideAndFade,
+          }} 
+        />
+        <Stack.Screen 
+          name="favorites" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideFromRight,
+          }} 
+        />
+        <Stack.Screen 
+          name="notifications" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideFromRight,
+          }} 
+        />
+        <Stack.Screen 
+          name="help" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideFromRight,
+          }} 
+        />
+        <Stack.Screen 
+          name="settings" 
+          options={{ 
+            headerShown: false,
+            ...ScreenTransitions.slideFromRight,
+          }} 
+        />
       </Stack>
-    </>
+    </GestureHandlerRootView>
   );
 }
