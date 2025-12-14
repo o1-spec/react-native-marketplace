@@ -111,6 +111,13 @@ export default function RootLayout() {
             ...ScreenTransitions.slideFromRight,
           }} 
         />
+        <Stack.Screen
+          name="contact-us"
+          options={{
+            headerShown: false,
+            ...ScreenTransitions.slideFromRight,
+          }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );

@@ -289,7 +289,7 @@ export default function SettingsScreen() {
 
               <TouchableOpacity
                 style={styles.settingItem}
-                onPress={() => Alert.alert('Contact Us', 'Coming soon...')}
+                onPress={() => router.push('/contact-us')}
               >
                 <View style={styles.settingLeft}>
                   <View style={[styles.iconContainer, { backgroundColor: '#F3E5F5' }]}>
