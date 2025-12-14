@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   Linking,
   ScrollView,
   StyleSheet,
@@ -53,30 +52,18 @@ const faqData: FAQItem[] = [
   },
   {
     id: '6',
-    question: 'How do I report a suspicious listing?',
-    answer: 'Tap the three dots on any listing and select "Report". Choose a reason and our team will review it within 24 hours.',
-    category: 'Safety',
-  },
-  {
-    id: '7',
     question: 'How do I contact a seller?',
     answer: 'On any product page, tap the "Message Seller" button to start a conversation. You can discuss details, negotiate prices, and arrange pickup or shipping.',
     category: 'Buying',
   },
   {
-    id: '8',
+    id: '7',
     question: 'Can I save items for later?',
     answer: 'Yes! Tap the heart icon on any product to save it to your Favorites. Access your saved items from your Profile.',
     category: 'Buying',
   },
   {
-    id: '9',
-    question: 'How do I get verified?',
-    answer: 'Complete your profile with a phone number and email. Make your first sale, and after positive reviews, you\'ll receive a verified badge.',
-    category: 'Account',
-  },
-  {
-    id: '10',
+    id: '8',
     question: 'What fees do you charge?',
     answer: 'We charge a 5% service fee on completed sales. Listing items is completely free. Payment processing fees may apply.',
     category: 'Fees',
@@ -94,31 +81,15 @@ const contactMethods = [
   },
   {
     id: '2',
-    title: 'Live Chat',
-    subtitle: 'Available 9 AM - 6 PM EST',
-    icon: 'chatbubbles',
-    color: '#A29BFE',
-    action: () => Alert.alert('Live Chat', 'Coming soon...'),
-  },
-  {
-    id: '3',
     title: 'Phone Support',
     subtitle: '+1 (800) 123-4567',
     icon: 'call',
     color: '#55EFC4',
     action: () => Linking.openURL('tel:+18001234567'),
   },
-  {
-    id: '4',
-    title: 'Help Center',
-    subtitle: 'Browse articles & guides',
-    icon: 'book',
-    color: '#FFB84D',
-    action: () => Alert.alert('Help Center', 'Coming soon...'),
-  },
 ];
 
-const categories = ['All', 'Selling', 'Buying', 'Payment', 'Shipping', 'Returns', 'Safety', 'Account', 'Fees'];
+const categories = ['All', 'Selling', 'Buying', 'Payment', 'Shipping', 'Returns', 'Fees'];
 
 export default function HelpScreen() {
   const router = useRouter();
@@ -309,48 +280,6 @@ export default function HelpScreen() {
               onPress={() => Linking.openURL('mailto:support@marketplace.com')}
               size="large"
             />
-          </View>
-        </View>
-
-        {/* Quick Links */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Links</Text>
-          <View style={styles.quickLinks}>
-            <TouchableOpacity
-              style={styles.quickLinkItem}
-              onPress={() => Alert.alert('Terms of Service', 'Coming soon...')}
-            >
-              <Ionicons name="document-text-outline" size={20} color="#636E72" />
-              <Text style={styles.quickLinkText}>Terms of Service</Text>
-              <Ionicons name="chevron-forward" size={18} color="#B2BEC3" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickLinkItem}
-              onPress={() => Alert.alert('Privacy Policy', 'Coming soon...')}
-            >
-              <Ionicons name="shield-checkmark-outline" size={20} color="#636E72" />
-              <Text style={styles.quickLinkText}>Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={18} color="#B2BEC3" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickLinkItem}
-              onPress={() => Alert.alert('Community Guidelines', 'Coming soon...')}
-            >
-              <Ionicons name="people-outline" size={20} color="#636E72" />
-              <Text style={styles.quickLinkText}>Community Guidelines</Text>
-              <Ionicons name="chevron-forward" size={18} color="#B2BEC3" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickLinkItem}
-              onPress={() => Alert.alert('Safety Tips', 'Coming soon...')}
-            >
-              <Ionicons name="shield-outline" size={20} color="#636E72" />
-              <Text style={styles.quickLinkText}>Safety Tips</Text>
-              <Ionicons name="chevron-forward" size={18} color="#B2BEC3" />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -591,30 +520,6 @@ const styles = StyleSheet.create({
     color: '#636E72',
     textAlign: 'center',
     marginBottom: 24,
-  },
-  quickLinks: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  quickLinkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-  },
-  quickLinkText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#2D3436',
   },
   bottomSpacing: {
     height: 40,
