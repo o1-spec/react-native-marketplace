@@ -1,4 +1,5 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import { authAPI } from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -18,26 +19,45 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleResetPassword = async () => {
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    console.log('Reset password for:', email);
-    setIsSubmitting(false);
-    setSent(true);
+    setError('');
+
+    try {
+      await authAPI.forgotPassword({ email });
+
+      console.log('Password reset email sent to:', email);
+      setSent(true);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to send reset email. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleResend = async () => {
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Resending email to:', email);
-    setIsSubmitting(false);
+    setError('');
+
+    try {
+      await authAPI.forgotPassword({ email });
+
+      console.log('Resending email to:', email);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to resend email. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Email validation
@@ -102,7 +122,10 @@ export default function ForgotPasswordScreen() {
                     placeholder="Email Address"
                     placeholderTextColor="#B2BEC3"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (error) setError('');
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     editable={!isSubmitting}
@@ -112,6 +135,14 @@ export default function ForgotPasswordScreen() {
                   )}
                 </View>
               </View>
+
+              {/* Error Display */}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
 
               {/* Send Reset Link Button - PRIMARY */}
               <View style={styles.buttonSpacing}>
@@ -158,6 +189,14 @@ export default function ForgotPasswordScreen() {
 
             {/* Actions */}
             <View style={styles.form}>
+              {/* Error Display for Resend */}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+
               {/* Back to Login Button - PRIMARY */}
               <View style={styles.buttonSpacing}>
                 <AnimatedButton
@@ -331,6 +370,23 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#2D3436',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FEB2B2',
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#C53030',
+    lineHeight: 20,
   },
   buttonSpacing: {
     marginBottom: 16,

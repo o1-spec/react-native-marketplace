@@ -1,5 +1,7 @@
 import AnimatedButton from "@/components/AnimatedButton";
+import { authAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -21,38 +23,14 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ ADD THIS
-
-  // Add error state
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  // Clear error when user types
-  const handleNameChange = (text: string) => {
-    setName(text);
-    if (error) setError("");
-  };
-
-  const handleEmailChange = (text: string) => {
-    setEmail(text);
-    if (error) setError("");
-  };
-
-  const handlePasswordChange = (text: string) => {
-    setPassword(text);
-    if (error) setError("");
-  };
-
-  const handleConfirmPasswordChange = (text: string) => {
-    setConfirmPassword(text);
-    if (error) setError("");
-  };
 
   const handleRegister = async () => {
     setIsSubmitting(true);
     setError("");
 
     try {
-      // Validate form
       if (name.length < 2) {
         throw new Error("Name must be at least 2 characters");
       }
@@ -66,15 +44,19 @@ export default function RegisterScreen() {
         throw new Error("Passwords do not match");
       }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const data = await authAPI.register({
+        name,
+        email,
+        password,
+      });
 
-      // Simulate API errors
-      if (email === "taken@test.com") {
-        throw new Error("This email is already registered");
+      console.log("Registration successful:", data);
+
+      if (data.token) {
+        await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("user", JSON.stringify(data.user));
       }
 
-      console.log("Register:", { name, email, password });
       router.push("/(auth)/verify-email");
     } catch (err) {
       setError(
@@ -92,12 +74,12 @@ export default function RegisterScreen() {
     email.includes("@") &&
     password.length >= 6 &&
     password === confirmPassword;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* Background Decorative Elements */}
       <View style={styles.decorContainer}>
         <View style={[styles.circle, styles.circle1]} />
         <View style={[styles.circle, styles.circle2]} />
@@ -144,7 +126,10 @@ export default function RegisterScreen() {
                 placeholder="Full Name"
                 placeholderTextColor="#B2BEC3"
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => {
+                  setName(text);
+                  if (error) setError("");
+                }}
                 autoCapitalize="words"
               />
             </View>
@@ -159,7 +144,10 @@ export default function RegisterScreen() {
                 placeholder="Email Address"
                 placeholderTextColor="#B2BEC3"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) setError("");
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -175,7 +163,10 @@ export default function RegisterScreen() {
                 placeholder="Password"
                 placeholderTextColor="#B2BEC3"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (error) setError("");
+                }}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
@@ -198,7 +189,10 @@ export default function RegisterScreen() {
                 placeholder="Confirm Password"
                 placeholderTextColor="#B2BEC3"
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (error) setError("");
+                }}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
               />
@@ -213,6 +207,7 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
           {error && (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={20} color="#FF6B6B" />

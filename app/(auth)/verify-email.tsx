@@ -1,7 +1,9 @@
-import AnimatedButton from '@/components/AnimatedButton';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import AnimatedButton from "@/components/AnimatedButton";
+import { authAPI } from "@/lib/api";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,18 +13,35 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [error, setError] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  // Timer for resend
+  useEffect(() => {
+    const loadUserEmail = async () => {
+      try {
+        const userData = await AsyncStorage.getItem("user");
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUserEmail(user.email);
+        }
+      } catch (error) {
+        console.error("Error loading user email:", error);
+      }
+    };
+
+    loadUserEmail();
+  }, []);
+
   useEffect(() => {
     if (resendTimer > 0) {
       const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
@@ -33,46 +52,53 @@ export default function VerifyEmailScreen() {
   }, [resendTimer]);
 
   const handleCodeChange = (text: string, index: number) => {
-    // Only allow numbers
     if (text && !/^\d+$/.test(text)) return;
 
     const newCode = [...code];
     newCode[index] = text;
     setCode(newCode);
 
-    // Auto-focus next input
+    if (error) setError("");
+
     if (text && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-verify when all 6 digits entered
-    if (newCode.every(digit => digit !== '') && index === 5) {
-      handleVerify(newCode.join(''));
+    if (newCode.every((digit) => digit !== "") && index === 5) {
+      handleVerify(newCode.join(""));
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    // Handle backspace
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.nativeEvent.key === "Backspace" && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   const handleVerify = async (verificationCode?: string) => {
     setIsVerifying(true);
+    setError("");
+
     try {
-      const codeToVerify = verificationCode || code.join('');
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // TODO: Implement verification logic
-      console.log('Verifying code:', codeToVerify);
-      
-      // On success, go to complete profile or main app
-      router.replace('/(auth)/complete-profile');
-      // or router.replace('/(tabs)'); if profile not needed
-    } catch (error) {
-      console.error('Verification failed:', error);
+      const codeToVerify = verificationCode || code.join("");
+
+      const data = await authAPI.verifyEmail({
+        email: userEmail,
+        code: codeToVerify,
+      });
+      console.log("Email verified successfully:", data);
+
+      if (data.user) {
+        await AsyncStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      router.replace("/(auth)/complete-profile");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Verification failed. Please try again."
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -80,21 +106,25 @@ export default function VerifyEmailScreen() {
 
   const handleResend = async () => {
     if (!canResend) return;
-    
+
     setIsResending(true);
+    setError("");
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // TODO: Implement resend logic
-      console.log('Resending verification code');
-      
+    await authAPI.resendVerification({ email: userEmail });
+
+      console.log("Verification code resent");
+
       setResendTimer(60);
       setCanResend(false);
-      setCode(['', '', '', '', '', '']);
+      setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
-    } catch (error) {
-      console.error('Resend failed:', error);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to resend code. Please try again."
+      );
     } finally {
       setIsResending(false);
     }
@@ -103,7 +133,7 @@ export default function VerifyEmailScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Background Decorative Elements */}
       <View style={styles.decorContainer}>
@@ -136,10 +166,10 @@ export default function VerifyEmailScreen() {
         {/* Welcome Text */}
         <View style={styles.welcomeContainer}>
           <Text style={styles.title}>Verify Your Email</Text>
-          <Text style={styles.subtitle}>
-            We've sent a 6-digit code to
+          <Text style={styles.subtitle}>We've sent a 6-digit code to</Text>
+          <Text style={styles.emailText}>
+            {userEmail || "your email address"} {/* ✅ DISPLAY ACTUAL EMAIL */}
           </Text>
-          <Text style={styles.emailText}>john@example.com</Text>
         </View>
 
         {/* Code Input */}
@@ -147,20 +177,28 @@ export default function VerifyEmailScreen() {
           {code.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => { inputRefs.current[index] = ref; }}
-              style={[
-                styles.codeInput,
-                digit && styles.codeInputFilled
-              ]}
+              ref={(ref) => {
+                inputRefs.current[index] = ref;
+              }}
+              style={[styles.codeInput, digit && styles.codeInputFilled]}
               value={digit}
               onChangeText={(text) => handleCodeChange(text, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="number-pad"
               maxLength={1}
               selectTextOnFocus
+              editable={!isVerifying}
             />
           ))}
         </View>
+
+        {/* ✅ ADD ERROR DISPLAY */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         {/* Resend Section */}
         <View style={styles.resendContainer}>
@@ -177,7 +215,11 @@ export default function VerifyEmailScreen() {
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={20} color="#636E72" />
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color="#636E72"
+          />
           <Text style={styles.infoText}>
             Didn't receive the code? Check your spam folder
           </Text>
@@ -190,7 +232,7 @@ export default function VerifyEmailScreen() {
           iconPosition="right"
           onPress={() => handleVerify()}
           loading={isVerifying}
-          disabled={code.every(d => d === '') || isVerifying}
+          disabled={code.every((d) => d === "") || isVerifying}
           fullWidth
           size="large"
         />
@@ -202,21 +244,21 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   decorContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
+    position: "absolute",
+    width: "100%",
+    height: "100%",
   },
   circle: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: 1000,
   },
   circle1: {
     width: 300,
     height: 300,
-    backgroundColor: '#E5F9F8',
+    backgroundColor: "#E5F9F8",
     top: -100,
     right: -100,
     opacity: 0.5,
@@ -224,7 +266,7 @@ const styles = StyleSheet.create({
   circle2: {
     width: 250,
     height: 250,
-    backgroundColor: '#FFE5E5',
+    backgroundColor: "#FFE5E5",
     bottom: -50,
     left: -80,
     opacity: 0.5,
@@ -232,8 +274,8 @@ const styles = StyleSheet.create({
   circle3: {
     width: 200,
     height: 200,
-    backgroundColor: '#FFF4E5',
-    top: '40%',
+    backgroundColor: "#FFF4E5",
+    top: "40%",
     right: -60,
     opacity: 0.4,
   },
@@ -250,100 +292,117 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
   iconContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
   },
   iconCircle: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
   },
   welcomeContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 40,
   },
   title: {
     fontSize: 30,
-    fontWeight: 'bold',
-    color: '#2D3436',
+    fontWeight: "bold",
+    color: "#2D3436",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: '#636E72',
-    textAlign: 'center',
+    color: "#636E72",
+    textAlign: "center",
     lineHeight: 22,
   },
   emailText: {
     fontSize: 16,
-    color: '#2D3436',
-    fontWeight: '600',
+    color: "#2D3436",
+    fontWeight: "600",
     marginTop: 4,
   },
   codeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 24,
     gap: 8,
   },
   codeInput: {
     flex: 1,
     height: 60,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E5EA',
-    textAlign: 'center',
+    borderColor: "#E5E5EA",
+    textAlign: "center",
     fontSize: 24,
-    fontWeight: '700',
-    color: '#2D3436',
-    shadowColor: '#000',
+    fontWeight: "700",
+    color: "#2D3436",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
   codeInputFilled: {
-    borderColor: '#4ECDC4',
-    backgroundColor: '#E5F9F8',
+    borderColor: "#4ECDC4",
+    backgroundColor: "#E5F9F8",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF5F5",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FEB2B2",
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#C53030",
+    lineHeight: 20,
   },
   resendContainer: {
     marginBottom: 20,
   },
   infoBox: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     gap: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#636E72',
+    color: "#636E72",
     lineHeight: 20,
   },
 });

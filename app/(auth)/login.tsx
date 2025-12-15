@@ -1,5 +1,7 @@
 import AnimatedButton from "@/components/AnimatedButton";
+import { authAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -31,21 +33,21 @@ export default function LoginScreen() {
     if (error) setError("");
   };
 
-  const handleLogin = async () => {
+ const handleLogin = async () => {
     setIsSubmitting(true);
     setError("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const data = await authAPI.login({
+        email,
+        password,
+      });
 
-      if (email === "error@test.com") {
-        throw new Error("Invalid email or password");
-      }
-      if (password === "wrong") {
-        throw new Error("Incorrect password");
-      }
+      console.log("Login successful:", data);
 
-      console.log("Login:", { email, password });
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
       router.replace("/(tabs)");
     } catch (err) {
       setError(
