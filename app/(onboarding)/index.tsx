@@ -1,50 +1,50 @@
 import AnimatedButton from '@/components/AnimatedButton';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  Animated,
   Dimensions,
   FlatList,
+  Image,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const slides = [
   {
     id: '1',
-    title: 'Buy & Sell with Ease',
-    description: 'Browse thousands of products from local sellers and find great deals',
-    icon: 'storefront',
+    title: 'Discover Amazing Products',
+    subtitle: 'Buy & Sell with Ease',
+    description: 'Browse thousands of products from local sellers and find incredible deals.',
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600',
     color: '#FF6B6B',
-    bgColor: '#FFE5E5',
   },
   {
     id: '2',
-    title: 'List Your Products',
-    description: 'Take a photo, add details, and start selling in minutes',
-    icon: 'camera',
+    title: 'List Your Products Instantly',
+    subtitle: 'Start Selling Today',
+    description: 'Take a photo, add details, and start selling your items in minutes.',
+    image: 'https://images.unsplash.com/photo-1556742111-a301076d9d18?w=600',
     color: '#4ECDC4',
-    bgColor: '#E5F9F8',
   },
   {
     id: '3',
-    title: 'Chat with Sellers',
-    description: 'Message sellers directly to ask questions and negotiate',
-    icon: 'chatbubbles',
+    title: 'Connect with Buyers & Sellers',
+    subtitle: 'Chat & Negotiate',
+    description: 'Message sellers directly to ask questions and arrange safe meetups.',
+    image: 'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600',
     color: '#FFB84D',
-    bgColor: '#FFF4E5',
   },
   {
     id: '4',
-    title: 'Safe & Secure',
-    description: 'All transactions are protected. Buy and sell with confidence',
-    icon: 'shield-checkmark',
+    title: 'Safe & Secure Transactions',
+    subtitle: 'Buy with Confidence',
+    description: 'All transactions are protected with our secure platform.',
+    image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600',
     color: '#A29BFE',
-    bgColor: '#E8E5FF',
   },
 ];
 
@@ -52,7 +52,6 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
 
   const viewableItemsChanged = useRef(({ viewableItems }: any) => {
     setCurrentIndex(viewableItems[0]?.index || 0);
@@ -64,6 +63,7 @@ export default function OnboardingScreen() {
     if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({
         index: currentIndex + 1,
+        animated: true,
       });
     } else {
       handleFinish();
@@ -71,8 +71,6 @@ export default function OnboardingScreen() {
   };
 
   const handleFinish = () => {
-    // Mark onboarding as completed
-    // AsyncStorage.setItem('onboardingCompleted', 'true');
     router.replace('/(tabs)');
   };
 
@@ -80,28 +78,39 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const renderItem = ({ item }: any) => (
-    <View style={styles.slide}>
-      <View style={[styles.iconContainer, { backgroundColor: item.bgColor }]}>
-        <Ionicons name={item.icon} size={80} color={item.color} />
+  const renderItem = ({ item }: any) => {
+    return (
+      <View style={styles.slide}>
+        <View style={styles.content}>
+          {/* Image */}
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: item.image }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          </View>
+
+          {/* Text Content */}
+          <View style={styles.textContainer}>
+            <Text style={[styles.subtitle, { color: item.color }]}>
+              {item.subtitle}
+            </Text>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+          </View>
+        </View>
       </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       {/* Skip Button */}
       {currentIndex < slides.length - 1 && (
-        <View style={styles.skipButton}>
-          <AnimatedButton
-            title="Skip"
-            variant="ghost"
-            size="small"
-            onPress={handleSkip}
-          />
-        </View>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
       )}
 
       {/* Slides */}
@@ -114,11 +123,6 @@ export default function OnboardingScreen() {
         pagingEnabled
         bounces={false}
         keyExtractor={(item) => item.id}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={32}
         onViewableItemsChanged={viewableItemsChanged}
         viewabilityConfig={viewConfig}
       />
@@ -127,50 +131,31 @@ export default function OnboardingScreen() {
       <View style={styles.bottomContainer}>
         {/* Pagination Dots */}
         <View style={styles.pagination}>
-          {slides.map((_, index) => {
-            const inputRange = [
-              (index - 1) * width,
-              index * width,
-              (index + 1) * width,
-            ];
-
-            const dotWidth = scrollX.interpolate({
-              inputRange,
-              outputRange: [8, 24, 8],
-              extrapolate: 'clamp',
-            });
-
-            const opacity = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.3, 1, 0.3],
-              extrapolate: 'clamp',
-            });
-
-            return (
-              <Animated.View
-                key={index}
-                style={[
-                  styles.dot,
-                  {
-                    width: dotWidth,
-                    opacity,
-                    backgroundColor: slides[currentIndex].color,
-                  },
-                ]}
-              />
-            );
-          })}
+          {slides.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                index === currentIndex && {
+                  backgroundColor: slides[currentIndex].color,
+                  width: 32,
+                },
+              ]}
+            />
+          ))}
         </View>
 
-        {/* Next/Get Started Button */}
+        {/* Continue Button */}
         <AnimatedButton
-          title={currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
+          title={currentIndex === slides.length - 1 ? 'Get Started' : 'Continue'}
           icon={currentIndex === slides.length - 1 ? 'checkmark-circle' : 'arrow-forward'}
           iconPosition="right"
           onPress={scrollTo}
           fullWidth
           size="large"
-          style={{ backgroundColor: slides[currentIndex].color }}
+          style={{
+            backgroundColor: slides[currentIndex].color,
+          }}
         />
       </View>
     </View>
@@ -180,36 +165,61 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#fff',
   },
   skipButton: {
     position: 'absolute',
     top: 60,
     right: 20,
     zIndex: 10,
+    padding: 10,
+  },
+  skipText: {
+    fontSize: 16,
+    color: '#636E72',
+    fontWeight: '600',
   },
   slide: {
     width,
+    height,
+  },
+  content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 30,
     paddingTop: 100,
   },
-  iconContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    justifyContent: 'center',
+  imageContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 60,
+  },
+  image: {
+    width: 280,
+    height: 280,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  textContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#2D3436',
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center',
+    lineHeight: 36,
   },
   description: {
     fontSize: 16,
@@ -218,18 +228,26 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 30,
-    paddingBottom: 60,
+    paddingBottom: 50,
+    paddingTop: 30,
+    backgroundColor: '#fff',
   },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
-    gap: 8,
+    marginBottom: 40,
+    gap: 12,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E5E5EA',
   },
 });
