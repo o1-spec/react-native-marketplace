@@ -50,7 +50,7 @@ export default function RegisterScreen() {
         password,
       });
 
-      console.log("Registration successful:", data);
+     console.log("Registration successful:", data);
 
       if (data.token) {
         await AsyncStorage.setItem("token", data.token);
