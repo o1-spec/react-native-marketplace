@@ -1,9 +1,12 @@
-import AnimatedButton from '@/components/AnimatedButton';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import AnimatedButton from "@/components/AnimatedButton";
+import { authAPI } from "@/lib/api";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -14,21 +17,62 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [location, setLocation] = useState('');
-  const [bio, setBio] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [location, setLocation] = useState("");
+  const [bio, setBio] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const uploadImage = async (uri: string) => {
+    const formData = new FormData();
+
+    const fileExtension = uri.split(".").pop() || "jpg";
+    const fileName = `profile_${Date.now()}.${fileExtension}`;
+
+    formData.append("file", {
+      uri,
+      type: `image/${fileExtension}`,
+      name: fileName,
+    } as any);
+
+    try {
+      // Get token for authentication
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      const response = await fetch("http://localhost:3000/api/upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type, let fetch set it with boundary
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error("Image upload error:", error);
+      throw error;
+    }
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photos');
+
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your photos");
       return;
     }
 
@@ -40,15 +84,26 @@ export default function CompleteProfileScreen() {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      try {
+        setIsUploadingImage(true);
+        const imageUrl = await uploadImage(result.assets[0].uri);
+        setProfileImage(imageUrl);
+      } catch (error) {
+        Alert.alert(
+          "Upload Failed",
+          "Failed to upload image. Please try again."
+        );
+      } finally {
+        setIsUploadingImage(false);
+      }
     }
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your camera');
+
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your camera");
       return;
     }
 
@@ -59,50 +114,83 @@ export default function CompleteProfileScreen() {
     });
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      try {
+        setIsUploadingImage(true);
+        const imageUrl = await uploadImage(result.assets[0].uri);
+        setProfileImage(imageUrl);
+      } catch (error) {
+        Alert.alert(
+          "Upload Failed",
+          "Failed to upload image. Please try again."
+        );
+      } finally {
+        setIsUploadingImage(false);
+      }
     }
   };
 
   const handleImageOptions = () => {
-    Alert.alert(
-      'Profile Picture',
-      'Choose an option',
-      [
-        { text: 'Take Photo', onPress: takePhoto },
-        { text: 'Choose from Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    const options: Array<{
+      text: string;
+      onPress?: () => void;
+      style?: "default" | "cancel" | "destructive";
+    }> = [
+      { text: "Take Photo", onPress: () => takePhoto() },
+      { text: "Choose from Library", onPress: () => pickImage() },
+    ];
+
+    if (profileImage) {
+      options.unshift({
+        text: "Remove Photo",
+        onPress: removePhoto,
+        style: "destructive",
+      });
+    }
+
+    options.push({ text: "Cancel", style: "cancel" });
+
+    Alert.alert("Profile Picture", "Choose an option", options);
+  };
+
+  const removePhoto = () => {
+    setProfileImage(null);
   };
 
   const handleComplete = async () => {
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    console.log('Complete profile:', {
-      profileImage,
-      phoneNumber,
-      location,
-      bio,
-    });
-    
-    setIsSubmitting(false);
-    router.replace('/(onboarding)');
+
+    try {
+      const profileData = {
+        phoneNumber: phoneNumber || undefined,
+        location: location || undefined,
+        bio: bio || undefined,
+        avatar: profileImage || undefined,
+      };
+
+      const data = await authAPI.completeProfile(profileData);
+
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      console.log("Profile completed:", data);
+      router.replace("/(onboarding)");
+    } catch (err) {
+      console.error("Profile completion error:", err);
+      Alert.alert("Error", "Failed to complete profile. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSkip = () => {
-    router.replace('/(onboarding)');
+    router.replace("/(onboarding)");
   };
 
-  // Check if form is valid
   const isFormValid = phoneNumber.length >= 10 && location.length >= 3;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Background Decorative Elements */}
       <View style={styles.decorContainer}>
@@ -128,7 +216,7 @@ export default function CompleteProfileScreen() {
         {/* Progress Indicator */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '75%' }]} />
+            <View style={[styles.progressFill, { width: "75%" }]} />
           </View>
           <Text style={styles.progressText}>Almost there!</Text>
         </View>
@@ -138,12 +226,20 @@ export default function CompleteProfileScreen() {
           <TouchableOpacity
             style={styles.imageContainer}
             onPress={handleImageOptions}
+            disabled={isUploadingImage}
           >
             {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.profileImage}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Ionicons name="camera" size={40} color="#B2BEC3" />
+                {isUploadingImage ? (
+                  <ActivityIndicator size="large" color="#4ECDC4" />
+                ) : (
+                  <Ionicons name="camera" size={40} color="#B2BEC3" />
+                )}
               </View>
             )}
             <View style={styles.imageEditBadge}>
@@ -267,21 +363,21 @@ export default function CompleteProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   decorContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
+    position: "absolute",
+    width: "100%",
+    height: "100%",
   },
   circle: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: 1000,
   },
   circle1: {
     width: 300,
     height: 300,
-    backgroundColor: '#FFE5E5',
+    backgroundColor: "#FFE5E5",
     top: -100,
     right: -100,
     opacity: 0.5,
@@ -289,7 +385,7 @@ const styles = StyleSheet.create({
   circle2: {
     width: 250,
     height: 250,
-    backgroundColor: '#E5F9F8',
+    backgroundColor: "#E5F9F8",
     bottom: -50,
     left: -80,
     opacity: 0.5,
@@ -297,8 +393,8 @@ const styles = StyleSheet.create({
   circle3: {
     width: 200,
     height: 200,
-    backgroundColor: '#FFF4E5',
-    top: '30%',
+    backgroundColor: "#FFF4E5",
+    top: "30%",
     right: -60,
     opacity: 0.4,
   },
@@ -309,9 +405,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   headerLeft: {
@@ -319,81 +415,81 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2D3436',
+    fontWeight: "bold",
+    color: "#2D3436",
   },
   skipText: {
     fontSize: 16,
-    color: '#636E72',
-    fontWeight: '600',
+    color: "#636E72",
+    fontWeight: "600",
   },
   progressContainer: {
     marginBottom: 30,
   },
   progressBar: {
     height: 6,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: "#E5E5EA",
     borderRadius: 3,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#4ECDC4',
+    height: "100%",
+    backgroundColor: "#4ECDC4",
     borderRadius: 3,
   },
   progressText: {
     fontSize: 14,
-    color: '#636E72',
-    fontWeight: '500',
+    color: "#636E72",
+    fontWeight: "500",
   },
   imageSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 32,
   },
   imageContainer: {
-    position: 'relative',
+    position: "relative",
     marginBottom: 12,
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   imagePlaceholder: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 3,
-    borderColor: '#E5E5EA',
-    borderStyle: 'dashed',
+    borderColor: "#E5E5EA",
+    borderStyle: "dashed",
   },
   imageEditBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#2D3436',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#2D3436",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 3,
-    borderColor: '#FAFAFA',
+    borderColor: "#FAFAFA",
   },
   imageLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
     marginBottom: 4,
   },
   imageSubLabel: {
     fontSize: 14,
-    color: '#636E72',
+    color: "#636E72",
   },
   form: {
     flex: 1,
@@ -403,18 +499,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
     marginBottom: 8,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -422,59 +518,59 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   textAreaWrapper: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     paddingVertical: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   helperText: {
     fontSize: 13,
-    color: '#636E72',
+    color: "#636E72",
     marginTop: 6,
     marginLeft: 4,
   },
   characterCount: {
     fontSize: 13,
-    color: '#B2BEC3',
-    textAlign: 'right',
+    color: "#B2BEC3",
+    textAlign: "right",
     marginTop: 4,
   },
   benefitsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 14,
     padding: 16,
     marginBottom: 24,
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   benefitIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F5F5F5",
+    justifyContent: "center",
+    alignItems: "center",
   },
   benefitText: {
     fontSize: 15,
-    color: '#2D3436',
-    fontWeight: '500',
+    color: "#2D3436",
+    fontWeight: "500",
   },
   buttonContainer: {
     gap: 12,

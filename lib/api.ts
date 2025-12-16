@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: "/api/auth/reset-password",
     VERIFY_EMAIL: "/api/auth/verify-email",
     RESEND_VERIFICATION: "/api/auth/resend-verification",
+    COMPLETE_PROFILE: '/api/auth/complete-profile',
   },
 
   // Users
@@ -139,6 +140,16 @@ export const authAPI = {
   resendVerification: (data: { email: string }) =>
     apiRequest(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, {
       method: "POST",
+      body: JSON.stringify(data),
+    }),
+     completeProfile: (data: {
+    phoneNumber?: string;
+    location?: string;
+    bio?: string;
+    avatar?: string;
+  }) =>
+    apiRequest(API_ENDPOINTS.AUTH.COMPLETE_PROFILE, {
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 };
