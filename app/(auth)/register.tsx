@@ -50,12 +50,14 @@ export default function RegisterScreen() {
         password,
       });
 
-     console.log("Registration successful:", data);
+      console.log("Registration successful:", data);
 
-      if (data.token) {
-        await AsyncStorage.setItem("token", data.token);
-        await AsyncStorage.setItem("user", JSON.stringify(data.user));
-      }
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      // if (data.token) {
+      //   await AsyncStorage.setItem("token", data.token);
+      //   await AsyncStorage.setItem("user", JSON.stringify(data.user));
+      // }
 
       router.push("/(auth)/verify-email");
     } catch (err) {

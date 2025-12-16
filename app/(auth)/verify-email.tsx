@@ -76,6 +76,11 @@ export default function VerifyEmailScreen() {
   };
 
   const handleVerify = async (verificationCode?: string) => {
+    if (!userEmail) {
+      setError("User email not found. Please try logging in again.");
+      return;
+    }
+
     setIsVerifying(true);
     setError("");
 
@@ -105,13 +110,18 @@ export default function VerifyEmailScreen() {
   };
 
   const handleResend = async () => {
+    if (!userEmail) {
+      setError("User email not found. Please try logging in again.");
+      return;
+    }
+
     if (!canResend) return;
 
     setIsResending(true);
     setError("");
 
     try {
-    await authAPI.resendVerification({ email: userEmail });
+      await authAPI.resendVerification({ email: userEmail });
 
       console.log("Verification code resent");
 
