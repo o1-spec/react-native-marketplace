@@ -41,20 +41,14 @@ export default function CompleteProfileScreen() {
     } as any);
 
     try {
-      // Get token for authentication
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        throw new Error("Not authenticated");
-      }
-
-      const response = await fetch("http://localhost:3000/api/upload", {
-        method: "POST",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // Don't set Content-Type, let fetch set it with boundary
-        },
-      });
+      const response = await fetch(
+        "http://localhost:3000/api/upload?folder=profiles",
+        {
+          // ✅ ADD FOLDER PARAM
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Upload failed");

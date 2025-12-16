@@ -97,6 +97,10 @@ export default function VerifyEmailScreen() {
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
       }
 
+      if (data.tempToken) {
+        await AsyncStorage.setItem("token", data.tempToken);
+      }
+      
       router.replace("/(auth)/complete-profile");
     } catch (err) {
       setError(

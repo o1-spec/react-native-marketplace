@@ -1,3 +1,5 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const API_CONFIG = {
   BASE_URL: __DEV__
     ? "http://localhost:3000"
@@ -36,14 +38,13 @@ export const API_ENDPOINTS = {
     CATEGORIES: "/api/products/categories",
   },
 
-  // Other endpoints...
 } as const;
 
 export const buildUrl = (endpoint: string): string => {
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 };
 
-export const getHeaders = (includeAuth: boolean = false, token?: string) => {
+export const getHeaders = (includeAuth: boolean = false, token?: string | null) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -142,16 +143,19 @@ export const authAPI = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-     completeProfile: (data: {
+    completeProfile: async (data: { 
     phoneNumber?: string;
     location?: string;
     bio?: string;
     avatar?: string;
-  }) =>
-    apiRequest(API_ENDPOINTS.AUTH.COMPLETE_PROFILE, {
+  }) => {
+    const token = await AsyncStorage.getItem('token'); 
+    return apiRequest(API_ENDPOINTS.AUTH.COMPLETE_PROFILE, {
       method: 'PUT',
       body: JSON.stringify(data),
-    }),
+      headers: getHeaders(true, token), 
+    });
+  },
 };
 
 export const productsAPI = {
