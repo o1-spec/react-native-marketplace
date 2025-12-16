@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -52,6 +53,27 @@ export default function WelcomeScreen() {
     router.push('/(auth)/register');
   };
 
+  const handleClearStorage = () => {
+  Alert.alert(
+    'Clear Storage',
+    'This will remove all stored data. Are you sure?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear();
+            Alert.alert('Success', 'All storage data has been cleared');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to clear storage');
+          }
+        },
+      },
+    ]
+  );
+};
   return (
     <View style={styles.container}>
       {/* Background Gradient */}
@@ -153,6 +175,13 @@ export default function WelcomeScreen() {
           </View>
           <Text style={styles.socialText}>Join 10,000+ happy users</Text>
         </View>
+        {/* <TouchableOpacity 
+        style={styles.clearButton}
+        onPress={handleClearStorage}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.clearButtonText}>Clear Storage</Text>
+      </TouchableOpacity> */}
       </Animated.View>
     </View>
   );
@@ -341,5 +370,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#636E72',
     fontWeight: '500',
+  },
+   clearButton: {
+    marginTop: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  clearButtonText: {
+    fontSize: 12,
+    color: '#B2BEC3',
+    textDecorationLine: 'underline',
   },
 });
