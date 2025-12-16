@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -29,6 +30,11 @@ export default function ForgotPasswordScreen() {
       await authAPI.forgotPassword({ email });
 
       console.log('Password reset email sent to:', email);
+      Toast.show({
+        type: 'success',
+        text1: 'Email Sent!',
+        text2: 'Please check your inbox for reset instructions.',
+      });
       setSent(true);
     } catch (err) {
       setError(
@@ -36,6 +42,11 @@ export default function ForgotPasswordScreen() {
           ? err.message
           : 'Failed to send reset email. Please try again.'
       );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err instanceof Error ? err.message : "Failed to send reset email. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -49,12 +60,22 @@ export default function ForgotPasswordScreen() {
       await authAPI.forgotPassword({ email });
 
       console.log('Resending email to:', email);
+      Toast.show({
+        type: 'success',
+        text1: 'Email Resent!',
+        text2: 'Please check your inbox for reset instructions.',
+      });
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : 'Failed to resend email. Please try again.'
       );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err instanceof Error ? err.message : "Failed to resend email. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }

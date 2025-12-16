@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -58,6 +59,11 @@ export default function RegisterScreen() {
       //   await AsyncStorage.setItem("token", data.token);
       //   await AsyncStorage.setItem("user", JSON.stringify(data.user));
       // }
+      Toast.show({
+        type: "success",
+        text1: "Registration Successful!",
+        text2: "Please check your email for verification code.",
+      });
 
       router.push("/(auth)/verify-email");
     } catch (err) {
@@ -66,6 +72,11 @@ export default function RegisterScreen() {
           ? err.message
           : "Registration failed. Please try again."
       );
+      Toast.show({
+        type: "error",
+        text1: "Registration Failed",
+        text2: err instanceof Error ? err.message : "Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }

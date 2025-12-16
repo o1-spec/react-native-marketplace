@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
@@ -100,7 +101,11 @@ export default function VerifyEmailScreen() {
       if (data.tempToken) {
         await AsyncStorage.setItem("token", data.tempToken);
       }
-      
+      Toast.show({
+        type: "success",
+        text1: "Email Verified!",
+        text2: "Your email has been successfully verified.",
+      });
       router.replace("/(auth)/complete-profile");
     } catch (err) {
       setError(
@@ -108,6 +113,11 @@ export default function VerifyEmailScreen() {
           ? err.message
           : "Verification failed. Please try again."
       );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err instanceof Error ? err.message : "Verification failed. Please try again.",
+      });
     } finally {
       setIsVerifying(false);
     }
@@ -133,12 +143,22 @@ export default function VerifyEmailScreen() {
       setCanResend(false);
       setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
+      Toast.show({
+        type: "success",
+        text1: "Code Resent!",
+        text2: "Please check your email for the new verification code.",
+      });
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Failed to resend code. Please try again."
       );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err instanceof Error ? err.message : "Failed to resend code. Please try again.",
+      });
     } finally {
       setIsResending(false);
     }

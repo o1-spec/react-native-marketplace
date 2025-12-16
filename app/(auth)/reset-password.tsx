@@ -4,15 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -48,6 +49,11 @@ export default function ResetPasswordScreen() {
       });
 
       setSuccess(true);
+      Toast.show({
+        type: "success",
+        text1: "Password Reset!",
+        text2: "Your password has been successfully reset.",
+      });
       console.log('Password reset successfully');
     } catch (err) {
       setError(
@@ -55,6 +61,11 @@ export default function ResetPasswordScreen() {
           ? err.message
           : 'Failed to reset password. Please try again.'
       );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err instanceof Error ? err.message : "Failed to reset password. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }

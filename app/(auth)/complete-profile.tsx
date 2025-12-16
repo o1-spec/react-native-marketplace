@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
@@ -44,7 +45,6 @@ export default function CompleteProfileScreen() {
       const response = await fetch(
         "http://localhost:3000/api/upload?folder=profiles",
         {
-          // ✅ ADD FOLDER PARAM
           method: "POST",
           body: formData,
         }
@@ -55,9 +55,19 @@ export default function CompleteProfileScreen() {
       }
 
       const data = await response.json();
+      Toast.show({
+        type: "success",
+        text1: "Photo Uploaded",
+        text2: "Your profile photo has been uploaded successfully.",
+      });
       return data.url;
     } catch (error) {
       console.error("Image upload error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Upload Failed",
+        text2: "Failed to upload image. Please try again.",
+      });
       throw error;
     }
   };
@@ -82,11 +92,21 @@ export default function CompleteProfileScreen() {
         setIsUploadingImage(true);
         const imageUrl = await uploadImage(result.assets[0].uri);
         setProfileImage(imageUrl);
+        Toast.show({
+          type: "success",
+          text1: "Photo Uploaded",
+          text2: "Your profile photo has been uploaded successfully.",
+        });
       } catch (error) {
         Alert.alert(
           "Upload Failed",
           "Failed to upload image. Please try again."
         );
+        Toast.show({
+          type: "error",
+          text1: "Upload Failed",
+          text2: "Failed to upload image. Please try again.",
+        });
       } finally {
         setIsUploadingImage(false);
       }
@@ -111,12 +131,22 @@ export default function CompleteProfileScreen() {
       try {
         setIsUploadingImage(true);
         const imageUrl = await uploadImage(result.assets[0].uri);
+        Toast.show({
+          type: "success",
+          text1: "Photo Uploaded",
+          text2: "Your profile photo has been uploaded successfully.",
+        });
         setProfileImage(imageUrl);
       } catch (error) {
         Alert.alert(
           "Upload Failed",
           "Failed to upload image. Please try again."
         );
+        Toast.show({
+          type: "error",
+          text1: "Upload Failed",
+          text2: "Failed to upload image. Please try again.",
+        });
       } finally {
         setIsUploadingImage(false);
       }
@@ -148,6 +178,11 @@ export default function CompleteProfileScreen() {
 
   const removePhoto = () => {
     setProfileImage(null);
+    Toast.show({
+      type: "success",
+      text1: "Photo Removed",
+      text2: "Your profile photo has been removed.",
+    });
   };
 
   const handleComplete = async () => {
@@ -167,9 +202,19 @@ export default function CompleteProfileScreen() {
 
       console.log("Profile completed:", data);
       router.replace("/(onboarding)");
+      Toast.show({
+        type: "success",
+        text1: "Profile Completed!",
+        text2: "Your profile has been successfully completed.",
+      });
     } catch (err) {
       console.error("Profile completion error:", err);
       Alert.alert("Error", "Failed to complete profile. Please try again.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err instanceof Error ? err.message : "Failed to complete profile. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }

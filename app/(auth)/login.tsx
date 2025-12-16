@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -48,11 +49,22 @@ export default function LoginScreen() {
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
 
+      Toast.show({
+        type: "success",
+        text1: "Login Successful!",
+        text2: "Welcome back!",
+      });
+
       router.replace("/(tabs)");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Login failed. Please try again."
       );
+      Toast.show({
+        type: "error",
+        text1: "Login Failed",
+        text2: err instanceof Error ? err.message : "Login failed. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
