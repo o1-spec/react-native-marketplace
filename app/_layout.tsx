@@ -1,5 +1,6 @@
 import { ScreenTransitions } from '@/constants/transitions';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { toastConfig } from '@/lib/toastConfig';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -140,7 +141,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AppContent />
-      <Toast />
+      <Toast config={toastConfig} /> 
     </AuthProvider>
   );
 }
