@@ -65,15 +65,22 @@ export const apiRequest = async (
   endpoint: string,
   options: RequestInit = {}
 ): Promise<any> => {
+ const token = await AsyncStorage.getItem('token');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
   const url = buildUrl(endpoint);
 
   const config: RequestInit = {
     ...options,
     headers: {
-      ...getHeaders(),
+      ...headers,
       ...options.headers,
     },
   };
+
 
   try {
     const controller = new AbortController();
