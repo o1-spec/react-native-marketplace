@@ -17,9 +17,12 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: "/api/auth/reset-password",
     VERIFY_EMAIL: "/api/auth/verify-email",
     RESEND_VERIFICATION: "/api/auth/resend-verification",
-    COMPLETE_PROFILE: '/api/auth/complete-profile',
+    COMPLETE_PROFILE: "/api/auth/complete-profile",
   },
 
+  NOTIFICATIONS: "/api/notifications",
+  NOTIFICATIONS_MARK_ALL_READ: "/api/notifications/mark-all-read",
+  NOTIFICATIONS_CLEAR_ALL: "/api/notifications/clear-all",
   // Users
   USERS: {
     PROFILE: "/api/users/profile",
@@ -37,14 +40,16 @@ export const API_ENDPOINTS = {
     SEARCH: "/api/products/search",
     CATEGORIES: "/api/products/categories",
   },
-
 } as const;
 
 export const buildUrl = (endpoint: string): string => {
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 };
 
-export const getHeaders = (includeAuth: boolean = false, token?: string | null) => {
+export const getHeaders = (
+  includeAuth: boolean = false,
+  token?: string | null
+) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -143,19 +148,69 @@ export const authAPI = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-    completeProfile: async (data: { 
+  completeProfile: async (data: {
     phoneNumber?: string;
     location?: string;
     bio?: string;
     avatar?: string;
   }) => {
-    const token = await AsyncStorage.getItem('token'); 
+    const token = await AsyncStorage.getItem("token");
     return apiRequest(API_ENDPOINTS.AUTH.COMPLETE_PROFILE, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
-      headers: getHeaders(true, token), 
+      headers: getHeaders(true, token),
     });
   },
+};
+
+export const notificationsAPI = {
+  getNotifications: (params?: {
+    page?: number;
+    limit?: number;
+    filter?: "all" | "unread";
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append("page", params.page.toString());
+    if (params?.limit) query.append("limit", params.limit.toString());
+    if (params?.filter) query.append("filter", params.filter);
+
+    return apiRequest(`${API_ENDPOINTS.NOTIFICATIONS}?${query}`);
+  },
+
+  createNotification: (data: {
+    type: string;
+    title: string;
+    message: string;
+    recipientId: string;
+    avatar?: string;
+    productImage?: string;
+    actionId?: string;
+    relatedUserId?: string;
+    relatedProductId?: string;
+  }) =>
+    apiRequest(API_ENDPOINTS.NOTIFICATIONS, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  markAllAsRead: () =>
+    apiRequest(API_ENDPOINTS.NOTIFICATIONS_MARK_ALL_READ, {
+      method: "PUT",
+    }),
+
+  clearAll: () =>
+    apiRequest(API_ENDPOINTS.NOTIFICATIONS_CLEAR_ALL, {
+      method: "DELETE",
+    }),
+  markAsRead: (id: string) =>
+    apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}/read`, {
+      method: "PUT",
+    }),
+
+  deleteNotification: (id: string) =>
+    apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}`, {
+      method: "DELETE",
+    }),
 };
 
 export const productsAPI = {
