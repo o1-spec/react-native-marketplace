@@ -28,8 +28,6 @@ export default function ForgotPasswordScreen() {
 
     try {
       await authAPI.forgotPassword({ email });
-
-      console.log('Password reset email sent to:', email);
       Toast.show({
         type: 'success',
         text1: 'Email Sent!',
@@ -58,8 +56,6 @@ export default function ForgotPasswordScreen() {
 
     try {
       await authAPI.forgotPassword({ email });
-
-      console.log('Resending email to:', email);
       Toast.show({
         type: 'success',
         text1: 'Email Resent!',

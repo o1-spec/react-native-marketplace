@@ -43,9 +43,6 @@ export default function LoginScreen() {
         email,
         password,
       });
-
-      console.log("Login successful:", data);
-
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
 

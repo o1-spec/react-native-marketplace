@@ -54,7 +54,6 @@ export default function ResetPasswordScreen() {
         text1: "Password Reset!",
         text2: "Your password has been successfully reset.",
       });
-      console.log('Password reset successfully');
     } catch (err) {
       setError(
         err instanceof Error

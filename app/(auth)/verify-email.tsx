@@ -92,8 +92,6 @@ export default function VerifyEmailScreen() {
         email: userEmail,
         code: codeToVerify,
       });
-      console.log("Email verified successfully:", data);
-
       if (data.user) {
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
       }
@@ -136,9 +134,6 @@ export default function VerifyEmailScreen() {
 
     try {
       await authAPI.resendVerification({ email: userEmail });
-
-      console.log("Verification code resent");
-
       setResendTimer(60);
       setCanResend(false);
       setCode(["", "", "", "", "", ""]);

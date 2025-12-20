@@ -116,7 +116,6 @@ export default function EditListingScreen() {
 
     const response = await productsAPI.getProductById(id as string);
     const productData = response.product; 
-    console.log("✅ Product data loaded:", productData);
 
     const conditionDisplayMap: { [key: string]: string } = {
       "new": "New",

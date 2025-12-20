@@ -69,7 +69,6 @@ export default function HomeScreen() {
   const fetchNotificationCount = async () => {
     try {
       const count = await notificationsAPI.getUnreadCount();
-      console.log("📬 Unread notification count:", count);
       setNotificationCount(count.count || 0);
     } catch (error) {
       console.error("Fetch notification count error:", error);

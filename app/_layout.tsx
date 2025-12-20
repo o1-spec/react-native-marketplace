@@ -58,7 +58,7 @@ function AppContent() {
           }} 
         />
         
-        <Stack.Screen 
+        {/* <Stack.Screen 
           name="modal" 
           options={{ 
             presentation: 'modal',
@@ -66,10 +66,10 @@ function AppContent() {
             headerShown: true,
             ...ScreenTransitions.bottomSheet,
           }} 
-        />
+        /> */}
         
         {/* Add missing screens with transitions */}
-        <Stack.Screen 
+        {/* <Stack.Screen 
           name="chat/[id]" 
           options={{ 
             headerShown: false,
@@ -82,14 +82,14 @@ function AppContent() {
             headerShown: false,
             ...ScreenTransitions.zoomIn,
           }} 
-        />
-        <Stack.Screen 
+        /> */}
+        {/* <Stack.Screen 
           name="user/[id]" 
           options={{ 
             headerShown: false,
             ...ScreenTransitions.slideAndFade,
           }} 
-        />
+        /> */}
         <Stack.Screen 
           name="search" 
           options={{ 

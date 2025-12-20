@@ -200,7 +200,6 @@ export default function CompleteProfileScreen() {
 
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
 
-      console.log("Profile completed:", data);
       router.replace("/(onboarding)");
       Toast.show({
         type: "success",
