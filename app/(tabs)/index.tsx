@@ -1,7 +1,7 @@
 import { FadeInView } from "@/components/AnimatedViews";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
-import { productsAPI, userAPI } from "@/lib/api"; // ✅ ADD IMPORT
+import { notificationsAPI, productsAPI, userAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -37,12 +37,10 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [userLoading, setUserLoading] = useState(true);
-
-  // ✅ ADD REAL PRODUCTS STATE
+  const [notificationCount, setNotificationCount] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [productsError, setProductsError] = useState<string | null>(null);
 
-  // Mini filter modal state
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filters, setFilters] = useState({
     minPrice: "",
@@ -50,7 +48,6 @@ export default function HomeScreen() {
     condition: "",
   });
 
-  // ✅ FETCH FEATURED PRODUCTS
   const fetchFeaturedProducts = async () => {
     try {
       setProductsError(null);
@@ -69,6 +66,17 @@ export default function HomeScreen() {
     }
   };
 
+  const fetchNotificationCount = async () => {
+    try {
+      const count = await notificationsAPI.getUnreadCount();
+      console.log("📬 Unread notification count:", count);
+      setNotificationCount(count.count || 0);
+    } catch (error) {
+      console.error("Fetch notification count error:", error);
+      setNotificationCount(0);
+    }
+  };
+
   const fetchUserData = async () => {
     try {
       const userData = await userAPI.getProfile();
@@ -84,11 +92,12 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchUserData();
     fetchFeaturedProducts();
+    fetchNotificationCount();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchFeaturedProducts();
+    await Promise.all([fetchFeaturedProducts(), fetchNotificationCount()]);
     setRefreshing(false);
   };
 
@@ -201,9 +210,13 @@ export default function HomeScreen() {
           onPress={() => router.push("/notifications")}
         >
           <Ionicons name="notifications-outline" size={24} color="#2D3436" />
-          <View style={styles.notificationBadge}>
-            <Text style={styles.badgeText}>3</Text>
-          </View>
+          {notificationCount > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.badgeText}>
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 

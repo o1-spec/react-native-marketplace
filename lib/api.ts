@@ -218,6 +218,8 @@ export const notificationsAPI = {
     apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}`, {
       method: "DELETE",
     }),
+    getUnreadCount: () => apiRequest("/api/notifications/unread-count"),
+
 };
 
 export const productsAPI = {
