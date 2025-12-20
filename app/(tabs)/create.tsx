@@ -405,7 +405,7 @@ export default function CreateListingScreen() {
             Price <Text style={styles.required}>*</Text>
           </Text>
           <View style={styles.priceContainer}>
-            <Text style={styles.currencySymbol}>$</Text>
+            <Text style={styles.currencySymbol}>₦</Text>
             <TextInput
               style={styles.priceInput}
               placeholder="0.00"
@@ -536,7 +536,7 @@ export default function CreateListingScreen() {
 
                 {shippingAvailable && (
                   <View style={styles.priceContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
+                    <Text style={styles.currencySymbol}>₦</Text>
                     <TextInput
                       style={styles.priceInput}
                       placeholder="Shipping cost"

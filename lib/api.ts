@@ -218,8 +218,7 @@ export const notificationsAPI = {
     apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}`, {
       method: "DELETE",
     }),
-    getUnreadCount: () => apiRequest("/api/notifications/unread-count"),
-
+  getUnreadCount: () => apiRequest("/api/notifications/unread-count"),
 };
 
 export const productsAPI = {
@@ -253,12 +252,19 @@ export const productsAPI = {
     const queryString = params ? new URLSearchParams(params).toString() : "";
     return apiRequest(`${API_ENDPOINTS.PRODUCTS_MY_LISTINGS}?${queryString}`);
   },
-    getListingsByUser: (userId: string) => apiRequest(`/api/products?userId=${userId}`),
+  getListingsByUser: (userId: string) =>
+    apiRequest(`/api/products?userId=${userId}`),
+  getProductsByCategory: (category: string, excludeId?: string) =>
+    apiRequest(
+      `/api/products?category=${encodeURIComponent(category)}${
+        excludeId ? `&excludeId=${excludeId}` : ""
+      }`
+    ),
 };
 
 export const userAPI = {
   getProfile: () => apiRequest("/api/users/profile"),
-    getUserProfile: (id: string) => apiRequest(`/api/users/${id}`),
+  getUserProfile: (id: string) => apiRequest(`/api/users/${id}`),
   updateProfile: (data: any) =>
     apiRequest(API_ENDPOINTS.USERS.UPDATE_PROFILE, {
       method: "PUT",
@@ -267,5 +273,6 @@ export const userAPI = {
 };
 
 export const reviewsAPI = {
-  getReviewsByUser: (userId: string) => apiRequest(`/api/reviews?userId=${userId}`),
+  getReviewsByUser: (userId: string) =>
+    apiRequest(`/api/reviews?userId=${userId}`),
 };

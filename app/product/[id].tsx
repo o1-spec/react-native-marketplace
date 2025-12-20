@@ -28,6 +28,7 @@ export default function ProductDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [product, setProduct] = useState<any>(null);
   const [productError, setProductError] = useState<string | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
 
   const fetchProduct = async () => {
     try {
@@ -41,6 +42,18 @@ export default function ProductDetailScreen() {
       Alert.alert("Error", "Failed to load product. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchSimilarProducts = async (category: string) => {
+    try {
+      const response = await productsAPI.getProductsByCategory(
+        category,
+        id as string
+      );
+      setSimilarProducts(response.products.slice(0, 6));
+    } catch (error) {
+      console.error("Fetch similar products error:", error);
     }
   };
 
@@ -82,10 +95,16 @@ export default function ProductDetailScreen() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (product?.category) {
+      fetchSimilarProducts(product.category);
+    }
+  }, [product?.category]);
+
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${product?.title} for $${product?.price}`,
+        message: `Check out ${product?.title} for ₦${product?.price}`,
         url: `myapp://product/${id}`,
       });
     } catch (error) {
@@ -200,7 +219,7 @@ export default function ProductDetailScreen() {
         {/* Product Info */}
         <SlideInView direction="up" delay={150}>
           <View style={styles.infoContainer}>
-            <Text style={styles.price}>${product.price.toLocaleString()}</Text>
+            <Text style={styles.price}>₦{product.price.toLocaleString()}</Text>
             <Text style={styles.title}>{product.title}</Text>
 
             <View style={styles.metaInfo}>
@@ -261,11 +280,11 @@ export default function ProductDetailScreen() {
                   <Ionicons name="star" size={14} color="#FFB84D" />
                   <Text style={styles.ratingText}>
                     {product?.sellerId?.rating || 0} (
-                    {product?.sellerId?.totalReviews || 0}) 
+                    {product?.sellerId?.totalReviews || 0})
                   </Text>
                 </View>
                 <Text style={styles.responseTime}>
-                  Responds in {product?.sellerId?.responseTime || "~1 hour"} 
+                  Responds in {product?.sellerId?.responseTime || "~1 hour"}
                 </Text>
               </View>
             </View>
@@ -283,11 +302,38 @@ export default function ProductDetailScreen() {
 
         {/* Similar Products Placeholder */}
         <SlideInView direction="up" delay={450}>
-          <View style={styles.similarSection}>
-            <Text style={styles.sectionTitle}>Similar Products</Text>
-            <Text style={styles.placeholderText}>Coming soon...</Text>
-          </View>
-        </SlideInView>
+  <View style={styles.similarSection}>
+    <Text style={styles.sectionTitle}>Similar Products</Text>
+    {similarProducts.length > 0 ? (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.similarProductsContainer}
+      >
+        {similarProducts.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.similarProductCard}
+            onPress={() => router.push(`/product/${item.id}`)}
+          >
+            <Image
+              source={{ uri: item.images[0] || 'https://i.pravatar.cc/300?img=47' }}
+              style={styles.similarProductImage}
+            />
+            <View style={styles.similarProductInfo}>
+              <Text style={styles.similarProductTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.similarProductPrice}>₦{item.price.toLocaleString()}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    ) : (
+      <Text style={styles.placeholderText}>No similar products found</Text>
+    )}
+  </View>
+</SlideInView>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
@@ -574,4 +620,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  similarProductsContainer: {
+  paddingHorizontal: 20,
+  gap: 12,
+},
+similarProductCard: {
+  width: 140,
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  overflow: 'hidden',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+similarProductImage: {
+  width: '100%',
+  height: 100,
+  backgroundColor: '#F5F5F5',
+},
+similarProductInfo: {
+  padding: 12,
+},
+similarProductTitle: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#2D3436',
+  marginBottom: 6,
+  lineHeight: 18,
+},
+similarProductPrice: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#2D3436',
+},
 });

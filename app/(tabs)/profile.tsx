@@ -190,7 +190,7 @@ export default function ProfileScreen() {
         <Text style={styles.listingTitle} numberOfLines={2}>
           {item.title}
         </Text>
-        <Text style={styles.listingPrice}>${item.price.toLocaleString()}</Text>
+        <Text style={styles.listingPrice}>₦{item.price.toLocaleString()}</Text>
         <View style={styles.listingMeta}>
           <Ionicons name="eye-outline" size={14} color="#636E72" />
           <Text style={styles.listingViews}>{item.views || 0} views</Text>
