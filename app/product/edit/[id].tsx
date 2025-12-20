@@ -1,9 +1,10 @@
-import AnimatedButton from '@/components/AnimatedButton';
-import { productsAPI } from '@/lib/api'; // ✅ ADD API IMPORT
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import AnimatedButton from "@/components/AnimatedButton";
+import { productsAPI } from "@/lib/api"; // ✅ ADD API IMPORT
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -15,20 +16,21 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+import Toast from "react-native-toast-message";
 
 const categories = [
-  { id: '1', name: 'Electronics', icon: 'laptop-outline' },
-  { id: '2', name: 'Fashion', icon: 'shirt-outline' },
-  { id: '3', name: 'Home', icon: 'home-outline' },
-  { id: '4', name: 'Sports', icon: 'basketball-outline' },
-  { id: '5', name: 'Books', icon: 'book-outline' },
-  { id: '6', name: 'Toys', icon: 'game-controller-outline' },
-  { id: '7', name: 'Vehicles', icon: 'car-outline' },
-  { id: '8', name: 'Other', icon: 'ellipsis-horizontal-outline' },
+  { id: "1", name: "Electronics", icon: "laptop-outline" },
+  { id: "2", name: "Fashion", icon: "shirt-outline" },
+  { id: "3", name: "Home", icon: "home-outline" },
+  { id: "4", name: "Sports", icon: "basketball-outline" },
+  { id: "5", name: "Books", icon: "book-outline" },
+  { id: "6", name: "Toys", icon: "game-controller-outline" },
+  { id: "7", name: "Vehicles", icon: "car-outline" },
+  { id: "8", name: "Other", icon: "ellipsis-horizontal-outline" },
 ];
 
-const conditions = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
+const conditions = ["New", "Like New", "Good", "Fair", "Poor"];
 
 interface ListingData {
   id: string;
@@ -50,47 +52,56 @@ export default function EditListingScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
-  const [condition, setCondition] = useState('Good');
-  const [location, setLocation] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [condition, setCondition] = useState("Good");
+  const [location, setLocation] = useState("");
   const [originalData, setOriginalData] = useState<ListingData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // ✅ UPLOAD IMAGE TO CLOUDINARY (REUSE FROM CREATE)
   const uploadImageToCloudinary = async (uri: string): Promise<string> => {
     const formData = new FormData();
-    formData.append('file', {
+
+    const fileExtension = uri.split(".").pop() || "jpg";
+    const fileName = `listing_${Date.now()}.${fileExtension}`;
+
+    formData.append("file", {
       uri,
-      type: 'image/jpeg',
-      name: 'photo.jpg',
+      type: `image/${fileExtension}`,
+      name: fileName,
     } as any);
-    formData.append('upload_preset', 'your_upload_preset'); // Replace with your preset
-    formData.append('cloud_name', 'your_cloud_name'); // Replace with your cloud name
+
+    const token = await AsyncStorage.getItem("token");
 
     const response = await fetch(
-      'https://api.cloudinary.com/v1_1/your_cloud_name/image/upload', // Replace with your URL
+      "http://localhost:3000/api/upload?folder=listings",
       {
-        method: 'POST',
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       }
     );
 
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+
     const data = await response.json();
-    return data.secure_url;
+    return data.url;
   };
 
-  // ✅ BATCH UPLOAD IMAGES
   const uploadImages = async (uris: string[]): Promise<string[]> => {
     try {
-      const uploadPromises = uris.map(uri => uploadImageToCloudinary(uri));
+      const uploadPromises = uris.map((uri) => uploadImageToCloudinary(uri));
       const urls = await Promise.all(uploadPromises);
       return urls;
     } catch (error) {
-      console.error('Image upload error:', error);
-      throw new Error('Failed to upload images');
+      console.error("Image upload error:", error);
+      throw new Error("Failed to upload images");
     }
   };
 
@@ -98,43 +109,67 @@ export default function EditListingScreen() {
     loadListingData();
   }, [id]);
 
-  // ✅ LOAD LISTING DATA FROM API
   const loadListingData = async () => {
-    try {
-      setLoadError(null);
-      setIsLoading(true);
+  try {
+    setLoadError(null);
+    setIsLoading(true);
 
-      const productData = await productsAPI.getProductById(id as string);
+    const response = await productsAPI.getProductById(id as string);
+    const productData = response.product; 
+    console.log("✅ Product data loaded:", productData);
 
-      // Populate form with existing data
-      setTitle(productData.title);
-      setDescription(productData.description);
-      setPrice(productData.price.toString());
-      setCategory(productData.category);
-      setCondition(productData.condition);
-      setLocation(`${productData.location?.city}, ${productData.location?.state}`);
-      setImages(productData.images || []);
-      setOriginalData(productData);
-    } catch (error: any) {
-      console.error('Load listing error:', error);
-      setLoadError('Failed to load listing data. Please try again.');
-      Alert.alert('Error', 'Failed to load listing data');
-      router.back();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const conditionDisplayMap: { [key: string]: string } = {
+      "new": "New",
+      "like_new": "Like New",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor",
+    };
+
+    setTitle(productData.title || "");
+    setDescription(productData.description || "");
+    setPrice(productData.price ? productData.price.toString() : "");
+    setCategory(productData.category || "");
+    setCondition(conditionDisplayMap[productData.condition] || "Good");
+    setLocation(
+      productData.location?.city && productData.location?.state
+        ? `${productData.location.city}, ${productData.location.state}`
+        : ""
+    );
+    setImages(productData.images || []);
+    setOriginalData(productData);
+  } catch (error: any) {
+    console.error("Load listing error:", error);
+    setLoadError("Failed to load listing data. Please try again.");
+    Toast.show({
+      type: "error",
+      text1: "Error",
+      text2: "Failed to load listing data. Please try again.",
+    });
+    router.back();
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const pickImages = async () => {
     if (images.length >= 5) {
-      Alert.alert('Maximum Images', 'You can only upload up to 5 images');
+      Toast.show({
+        type: "error",
+        text1: "Maximum Images",
+        text2: "You can only upload up to 5 images",
+      });
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photos');
+    if (status !== "granted") {
+      Toast.show({
+        type: "error",
+        text1: "Permission needed",
+        text2: "Please allow access to your photos",
+      });
       return;
     }
 
@@ -155,14 +190,22 @@ export default function EditListingScreen() {
 
   const takePhoto = async () => {
     if (images.length >= 5) {
-      Alert.alert('Maximum Images', 'You can only upload up to 5 images');
+      Toast.show({
+        type: "error",
+        text1: "Maximum Images",
+        text2: "You can only upload up to 5 images",
+      });
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your camera');
+    if (status !== "granted") {
+      Toast.show({
+        type: "error",
+        text1: "Permission needed",
+        text2: "Please allow access to your camera",
+      });
       return;
     }
 
@@ -178,25 +221,21 @@ export default function EditListingScreen() {
   };
 
   const removeImage = (index: number) => {
-    Alert.alert(
-      'Remove Photo',
-      'Are you sure you want to remove this photo?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => setImages(images.filter((_, i) => i !== index)),
-        },
-      ]
-    );
+    Alert.alert("Remove Photo", "Are you sure you want to remove this photo?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => setImages(images.filter((_, i) => i !== index)),
+      },
+    ]);
   };
 
   const handleImageOptions = () => {
-    Alert.alert('Add Photo', 'Choose an option', [
-      { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Choose from Library', onPress: pickImages },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Add Photo", "Choose an option", [
+      { text: "Take Photo", onPress: takePhoto },
+      { text: "Choose from Library", onPress: pickImages },
+      { text: "Cancel", style: "cancel" },
     ]);
   };
 
@@ -214,111 +253,145 @@ export default function EditListingScreen() {
     );
   };
 
-  // ✅ SAVE CHANGES VIA API
   const handleSave = async () => {
-    // Validation
     if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title for your listing');
+      Toast.show({
+        type: "error",
+        text1: "Missing Title",
+        text2: "Please enter a title for your listing",
+      });
       return;
     }
     if (!price.trim()) {
-      Alert.alert('Missing Price', 'Please enter a price');
+      Toast.show({
+        type: "error",
+        text1: "Missing Price",
+        text2: "Please enter a price",
+      });
       return;
     }
     if (images.length === 0) {
-      Alert.alert('Missing Images', 'Please add at least one photo');
+      Toast.show({
+        type: "error",
+        text1: "Missing Images",
+        text2: "Please add at least one photo",
+      });
       return;
     }
     if (!category) {
-      Alert.alert('Missing Category', 'Please select a category');
+      Toast.show({
+        type: "error",
+        text1: "Missing Category",
+        text2: "Please select a category",
+      });
       return;
     }
 
     if (!hasChanges()) {
-      Alert.alert('No Changes', 'No changes were made to your listing');
+      Toast.show({
+        type: "info",
+        text1: "No Changes",
+        text2: "No changes were made to save",
+      });
       return;
     }
 
     setIsSaving(true);
     try {
-      // Separate existing URLs from new URIs
-      const existingImages = images.filter(img => img.startsWith('http'));
-      const newImageUris = images.filter(img => !img.startsWith('http'));
+      const existingImages = images.filter((img) => img.startsWith("http"));
+      const newImageUris = images.filter((img) => !img.startsWith("http"));
 
-      // Upload new images
       let allImageUrls = existingImages;
       if (newImageUris.length > 0) {
         const uploadedUrls = await uploadImages(newImageUris);
         allImageUrls = [...existingImages, ...uploadedUrls];
       }
 
-      // Parse location
-      const [city, state] = location.split(',').map(s => s.trim());
+      const [city, state] = location.split(",").map((s) => s.trim());
       if (!city || !state) {
-        Alert.alert('Invalid Location', 'Please enter location as "City, State"');
+        Toast.show({
+          type: "error",
+          text1: "Invalid Location",
+          text2: "Please enter a valid location (City, State)",
+        });
         return;
       }
 
-      // Map condition to model format
       const conditionMap: { [key: string]: string } = {
-        'New': 'new',
-        'Like New': 'like_new',
-        'Good': 'good',
-        'Fair': 'fair',
-        'Poor': 'poor'
+        New: "new",
+        "Like New": "like_new",
+        Good: "good",
+        Fair: "fair",
+        Poor: "poor",
       };
 
-      // Prepare update data
       const updateData = {
         title: title.trim(),
         description: description.trim(),
         price: parseFloat(price),
         category,
-        condition: conditionMap[condition] || 'good',
+        condition: conditionMap[condition] || "good",
         images: allImageUrls,
         location: {
           city,
           state,
-          country: 'USA',
+          country: "USA",
         },
       };
 
-      // Update product via API
       await productsAPI.updateProduct(id as string, updateData);
 
-      Alert.alert('Success!', 'Your listing has been updated', [
+      Toast.show({
+        type: "success",
+        text1: "Success!",
+        text2: "Your listing has been updated",
+      });
+      Alert.alert("Success!", "Your listing has been updated", [
         {
-          text: 'OK',
+          text: "OK",
           onPress: () => router.back(),
         },
       ]);
     } catch (error: any) {
-      console.error('Save listing error:', error);
-      Alert.alert('Error', error.message || 'Failed to update listing. Please try again.');
+      console.error("Save listing error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to update listing. Please try again.",
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // ✅ DELETE LISTING VIA API
   const handleDelete = () => {
     Alert.alert(
-      'Delete Listing',
-      'Are you sure you want to delete this listing? This action cannot be undone.',
+      "Delete Listing",
+      "Are you sure you want to delete this listing? This action cannot be undone.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
             setIsDeleting(true);
             try {
               await productsAPI.deleteProduct(id as string);
-              Alert.alert('Deleted', 'Your listing has been deleted');
-              router.push('/(tabs)');
+              Toast.show({
+                type: "success",
+                text1: "Deleted",
+                text2: "Your listing has been deleted",
+              });
+              router.push("/(tabs)");
             } catch (error: any) {
-              console.error('Delete listing error:', error);
-              Alert.alert('Error', error.message || 'Failed to delete listing');
+              console.error("Delete listing error:", error);
+              Toast.show({
+                type: "error",
+                text1: "Error",
+                text2:
+                  error.message ||
+                  "Failed to delete listing. Please try again.",
+              });
             } finally {
               setIsDeleting(false);
             }
@@ -344,10 +417,7 @@ export default function EditListingScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="cloud-offline-outline" size={48} color="#B2BEC3" />
         <Text style={styles.errorText}>{loadError}</Text>
-        <TouchableOpacity 
-          style={styles.retryButton}
-          onPress={loadListingData}
-        >
+        <TouchableOpacity style={styles.retryButton} onPress={loadListingData}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -357,7 +427,7 @@ export default function EditListingScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -366,10 +436,10 @@ export default function EditListingScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Listing</Text>
         <TouchableOpacity onPress={handleDelete} disabled={isDeleting}>
-          <Ionicons 
-            name={isDeleting ? "refresh" : "trash-outline"} 
-            size={24} 
-            color={isDeleting ? "#B2BEC3" : "#FF6B6B"} 
+          <Ionicons
+            name={isDeleting ? "refresh" : "trash-outline"}
+            size={24}
+            color={isDeleting ? "#B2BEC3" : "#FF6B6B"}
           />
         </TouchableOpacity>
       </View>
@@ -491,7 +561,7 @@ export default function EditListingScreen() {
                 <Ionicons
                   name={cat.icon as any}
                   size={24}
-                  color={category === cat.name ? '#4ECDC4' : '#636E72'}
+                  color={category === cat.name ? "#4ECDC4" : "#636E72"}
                 />
                 <Text
                   style={[
@@ -583,63 +653,63 @@ export default function EditListingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
   },
   loadingSpinner: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E5F9F8',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E5F9F8",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: '#636E72',
+    color: "#636E72",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
   },
   content: {
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     marginTop: 8,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
     marginBottom: 12,
   },
   required: {
-    color: '#FF6B6B',
+    color: "#FF6B6B",
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: '#636E72',
+    color: "#636E72",
     marginBottom: 16,
   },
   imagesContainer: {
@@ -650,114 +720,114 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E5EA',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    borderColor: "#E5E5EA",
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
   },
   addPhotoText: {
     fontSize: 13,
-    color: '#B2BEC3',
+    color: "#B2BEC3",
     marginTop: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   imagePreview: {
-    position: 'relative',
+    position: "relative",
     width: 120,
     height: 120,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   previewImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   coverBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(78, 205, 196, 0.9)',
+    backgroundColor: "rgba(78, 205, 196, 0.9)",
     paddingVertical: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   coverText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   removeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
   },
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   textArea: {
     height: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   characterCount: {
     fontSize: 12,
-    color: '#B2BEC3',
-    textAlign: 'right',
+    color: "#B2BEC3",
+    textAlign: "right",
     marginTop: 8,
   },
   priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     paddingHorizontal: 16,
   },
   currencySymbol: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
     marginRight: 8,
   },
   priceInput: {
     flex: 1,
     paddingVertical: 16,
     fontSize: 20,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
   },
   categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   categoryCard: {
-    width: '22%',
+    width: "22%",
     aspectRatio: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 8,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   categoryCardActive: {
-    backgroundColor: '#E5F9F8',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#E5F9F8",
+    borderColor: "#4ECDC4",
   },
   categoryText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#636E72',
+    fontWeight: "600",
+    color: "#636E72",
   },
   categoryTextActive: {
-    color: '#4ECDC4',
+    color: "#4ECDC4",
   },
   conditionsContainer: {
     gap: 8,
@@ -766,26 +836,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   conditionChipActive: {
-    backgroundColor: '#E5F9F8',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#E5F9F8",
+    borderColor: "#4ECDC4",
   },
   conditionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#636E72',
+    fontWeight: "600",
+    color: "#636E72",
   },
   conditionTextActive: {
-    color: '#4ECDC4',
+    color: "#4ECDC4",
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -794,34 +864,34 @@ const styles = StyleSheet.create({
   locationInput: {
     flex: 1,
     fontSize: 15,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   bottomSpacing: {
     height: 40,
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
     paddingHorizontal: 40,
   },
   errorText: {
     fontSize: 16,
-    color: '#636E72',
-    textAlign: 'center',
+    color: "#636E72",
+    textAlign: "center",
     marginTop: 12,
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   retryText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

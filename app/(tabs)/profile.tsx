@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Image,
@@ -27,6 +27,7 @@ export default function ProfileScreen() {
   const [listingsLoading, setListingsLoading] = useState(true);
   const [userError, setUserError] = useState<string | null>(null);
   const [listingsError, setListingsError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchUserProfile = async () => {
     try {
@@ -37,9 +38,9 @@ export default function ProfileScreen() {
       console.error("Fetch user profile error:", error);
       setUserError("Failed to load profile");
       Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.message || 'Failed to load profile',
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to load profile",
       });
     } finally {
       setUserLoading(false);
@@ -55,19 +56,23 @@ export default function ProfileScreen() {
       console.error("Fetch user listings error:", error);
       setListingsError("Failed to load listings");
       Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.message || 'Failed to load listings',
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to load listings",
       });
     } finally {
       setListingsLoading(false);
     }
   };
 
-   useFocusEffect(() => {
-    fetchUserProfile();
-    fetchUserListings();
-  });
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isRefreshing) {
+        fetchUserProfile();
+        fetchUserListings();
+      }
+    }, [isRefreshing])
+  );
 
   const activeListings = listings.filter((item) => item.status === "active");
   const soldListings = listings.filter((item) => item.status === "sold");
@@ -106,9 +111,9 @@ export default function ProfileScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Toast.show({
-          type: 'error',
-          text1: 'Permission Denied',
-          text2: 'Permission to access media library is required!',
+          type: "error",
+          text1: "Permission Denied",
+          text2: "Permission to access media library is required!",
         });
         return;
       }
@@ -131,17 +136,17 @@ export default function ProfileScreen() {
         setUser((prev: any) => ({ ...prev, avatar: avatarUrl }));
 
         Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Avatar updated successfully!',
+          type: "success",
+          text1: "Success",
+          text2: "Avatar updated successfully!",
         });
       }
     } catch (error: any) {
       console.error("Avatar update error:", error);
       Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to update avatar. Please try again.',
+        type: "error",
+        text1: "Error",
+        text2: "Failed to update avatar. Please try again.",
       });
     } finally {
       setUpdatingAvatar(false);
@@ -161,9 +166,9 @@ export default function ProfileScreen() {
           } catch (error) {
             console.error("Logout error:", error);
             Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2: 'Failed to logout. Please try again.',
+              type: "error",
+              text1: "Error",
+              text2: "Failed to logout. Please try again.",
             });
           }
         },
