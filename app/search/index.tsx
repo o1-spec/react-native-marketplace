@@ -1,6 +1,7 @@
 import AnimatedButton from "@/components/AnimatedButton";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
+import { productsAPI } from "@/lib/api"; // ✅ ADD IMPORT
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -14,77 +15,6 @@ import {
 } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 
-const mockProducts = [
-  {
-    id: "1",
-    title: "iPhone 13 Pro Max 256GB",
-    price: 899,
-    image: "https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=400",
-    location: "San Francisco, CA",
-    condition: "Used",
-    category: "Electronics",
-    createdAt: "2024-12-10",
-    trending: true,
-    views: 1234,
-  },
-  {
-    id: "2",
-    title: 'MacBook Pro 14" M1 Pro',
-    price: 1899,
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400",
-    location: "New York, NY",
-    condition: "New",
-    category: "Electronics",
-    createdAt: "2024-12-12",
-    trending: true,
-    views: 2345,
-  },
-  {
-    id: "3",
-    title: "Sony WH-1000XM4 Headphones",
-    price: 249,
-    image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400",
-    location: "Los Angeles, CA",
-    condition: "Used",
-    category: "Electronics",
-    createdAt: "2024-12-11",
-    views: 567,
-  },
-  {
-    id: "4",
-    title: "iPad Air 5th Gen 64GB",
-    price: 499,
-    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400",
-    location: "Chicago, IL",
-    condition: "New",
-    category: "Electronics",
-    createdAt: "2024-12-13",
-    views: 890,
-  },
-  {
-    id: "5",
-    title: "Nike Air Max Sneakers",
-    price: 89,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    location: "Miami, FL",
-    condition: "New",
-    category: "Fashion",
-    createdAt: "2024-12-12",
-    views: 456,
-  },
-  {
-    id: "6",
-    title: "Vintage Leather Jacket",
-    price: 129,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400",
-    location: "Seattle, WA",
-    condition: "Used",
-    category: "Fashion",
-    createdAt: "2024-12-09",
-    views: 234,
-  },
-];
-
 type FilterType =
   | "trending"
   | "new-arrivals"
@@ -94,8 +24,8 @@ type FilterType =
   | "price"
   | "condition"
   | "search"
- | "condition"
- | "all-categories";
+  | "all-categories"
+  | "advanced";
 
 export default function SearchResultsScreen() {
   const router = useRouter();
@@ -111,129 +41,166 @@ export default function SearchResultsScreen() {
   >("relevant");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<any[]>([]);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // ✅ FETCH PRODUCTS BASED ON FILTERS
+  const fetchProducts = async (pageNum = 1, append = false) => {
+    try {
+      if (!append) {
+        setProductsError(null);
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      // Build API parameters based on filter type
+      let apiParams: any = {
+        page: pageNum,
+        limit: 20,
+      };
+
+      // Apply sorting
+      switch (sortBy) {
+        case "price-low":
+          apiParams.sortBy = "price";
+          apiParams.sortOrder = "asc";
+          break;
+        case "price-high":
+          apiParams.sortBy = "price";
+          apiParams.sortOrder = "desc";
+          break;
+        case "newest":
+          apiParams.sortBy = "createdAt";
+          apiParams.sortOrder = "desc";
+          break;
+        case "relevant":
+        default:
+          apiParams.sortBy = "createdAt";
+          apiParams.sortOrder = "desc";
+          break;
+      }
+
+      // Apply filters based on type
+      switch (filterType) {
+        case "trending":
+          apiParams.sortBy = "views";
+          apiParams.sortOrder = "desc";
+          break;
+
+        case "new-arrivals":
+          // Get products from last 7 days
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          // Note: This would need backend support for date filtering
+          break;
+
+        case "nearby":
+          // In real app, use user's location
+          // For now, just show all products
+          break;
+
+        case "deals":
+          apiParams.maxPrice = 500;
+          break;
+
+        case "category":
+          apiParams.category = filterValue;
+          break;
+
+        case "price":
+          const [min, max] = filterValue.split("-").map(Number);
+          if (min) apiParams.minPrice = min;
+          if (max) apiParams.maxPrice = max;
+          break;
+
+        case "condition":
+          apiParams.condition = filterValue.toLowerCase().replace(" ", "_");
+          break;
+
+        case "search":
+        case "advanced":
+          if (searchQuery) apiParams.search = searchQuery;
+          
+          // Handle advanced filters
+          if (params.priceRange) {
+            const [min, max] = (params.priceRange as string).split("-");
+            if (min && min !== "0") apiParams.minPrice = parseFloat(min);
+            if (max) apiParams.maxPrice = parseFloat(max);
+          }
+          if (params.condition) apiParams.condition = params.condition;
+          if (params.location) apiParams.location = params.location;
+          break;
+
+        default:
+          // No additional filtering
+          break;
+      }
+
+      const response = await productsAPI.getProducts(apiParams);
+
+      if (append) {
+        setProducts(prev => [...prev, ...response.products]);
+      } else {
+        setProducts(response.products);
+      }
+
+      setHasMore(response.products.length === 20);
+    } catch (error: any) {
+      console.error('Fetch products error:', error);
+      setProductsError('Failed to load products. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate loading search results
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800); // Slightly faster for search refinements
-
-    return () => clearTimeout(timer);
+    setPage(1);
+    fetchProducts(1, false);
   }, [filterType, filterValue, sortBy, searchQuery]);
 
-  // Get filtered products based on filter type and search query
-  const getFilteredProducts = () => {
-    let filtered = [...mockProducts];
-
-    // Apply search query filter first
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (p) =>
-          p.title.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query) ||
-          p.location.toLowerCase().includes(query)
-      );
-    }
-
-    // Then apply other filters
-    switch (filterType) {
-      case "trending":
-        filtered = filtered.filter((p) => p.trending);
-        break;
-
-      case "new-arrivals":
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        filtered = filtered.filter((p) => new Date(p.createdAt) > threeDaysAgo);
-        break;
-
-      case "nearby":
-        // In real app, filter by user's location
-        filtered = filtered.filter((p) => p.location.includes("San Francisco"));
-        break;
-
-      case "deals":
-        // Filter items under $500
-        filtered = filtered.filter((p) => p.price < 500);
-        break;
-
-      case "category":
-        filtered = filtered.filter((p) => p.category === filterValue);
-        break;
-
-      case "price":
-        const [min, max] = filterValue.split("-").map(Number);
-        filtered = filtered.filter((p) => {
-          if (max) {
-            return p.price >= min && p.price <= max;
-          }
-          return p.price >= min;
-        });
-        break;
-
-      case "condition":
-        filtered = filtered.filter((p) => p.condition === filterValue);
-        break;
-
-      case "search":
-        // Search query filtering is already handled above
-        // This case indicates this is a search-based result
-        break;
-
-      default:
-        // No additional filtering for unknown types
-        break;
-    }
-
-    return filtered;
-  };
-  // Sort products
-  const getSortedProducts = () => {
-    const filtered = getFilteredProducts();
-
-    switch (sortBy) {
-      case "price-low":
-        return [...filtered].sort((a, b) => a.price - b.price);
-      case "price-high":
-        return [...filtered].sort((a, b) => b.price - a.price);
-      case "newest":
-        return [...filtered].sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      case "relevant":
-      default:
-        return filtered;
+  const handleLoadMore = () => {
+    if (hasMore && !isLoadingMore && !isLoading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchProducts(nextPage, true);
     }
   };
 
-  const products = getSortedProducts();
+  const handleSortChange = (newSort: typeof sortBy) => {
+    setSortBy(newSort);
+    // fetchProducts will be called via useEffect
+  };
 
   // Get page title based on filter type
   const getPageTitle = () => {
-  switch (filterType) {
-    case "trending":
-      return "Trending Now";
-    case "new-arrivals":
-      return "New Arrivals";
-    case "nearby":
-      return "Nearby Items";
-    case "deals":
-      return "Best Deals";
-    case "category":
-      return filterValue;
-    case "price":
-      return "Price Range";
-    case "condition":
-      return `${filterValue} Items`;
-    case "all-categories":
-      return "All Categories";
-    default:
-      return "Search Results";
-  }
-};
+    switch (filterType) {
+      case "trending":
+        return "Trending Now";
+      case "new-arrivals":
+        return "New Arrivals";
+      case "nearby":
+        return "Nearby Items";
+      case "deals":
+        return "Best Deals";
+      case "category":
+        return filterValue;
+      case "price":
+        return "Price Range";
+      case "condition":
+        return `${filterValue} Items`;
+      case "all-categories":
+        return "All Categories";
+      case "advanced":
+        return "Search Results";
+      default:
+        return "Search Results";
+    }
+  };
 
   const handleFavoriteToggle = (id: string) => {
     setFavorites((prev) =>
@@ -301,7 +268,7 @@ export default function SearchResultsScreen() {
                 styles.sortChip,
                 sortBy === sort.key && styles.activeSortChip,
               ]}
-              onPress={() => setSortBy(sort.key as any)}
+              onPress={() => handleSortChange(sort.key as any)}
             >
               <Text
                 style={[
@@ -336,6 +303,15 @@ export default function SearchResultsScreen() {
     </View>
   );
 
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ProductCardSkeleton />
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -369,6 +345,17 @@ export default function SearchResultsScreen() {
             </View>
           ))}
         </View>
+      ) : productsError ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color="#B2BEC3" />
+          <Text style={styles.errorText}>{productsError}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => fetchProducts(1, false)}
+          >
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={products}
@@ -378,9 +365,9 @@ export default function SearchResultsScreen() {
                 id={item.id}
                 title={item.title}
                 price={item.price}
-                image={item.image}
-                location={item.location}
-                condition={item.condition as "New" | "Used"}
+                image={item.images?.[0] || ''}
+                location={`${item.location?.city}, ${item.location?.state}`}
+                condition={item.condition}
                 isFavorite={favorites.includes(item.id)}
                 onFavoritePress={() => handleFavoriteToggle(item.id)}
               />
@@ -394,6 +381,9 @@ export default function SearchResultsScreen() {
           ]}
           ListHeaderComponent={products.length > 0 ? renderSortButton : null}
           ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -547,5 +537,33 @@ const styles = StyleSheet.create({
   },
   skeletonGrid: {
     padding: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#636E72',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4ECDC4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  footerLoader: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
 });

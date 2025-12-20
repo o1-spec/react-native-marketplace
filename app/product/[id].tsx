@@ -1,10 +1,13 @@
 import AnimatedButton from '@/components/AnimatedButton';
 import { FadeInView, SlideInView } from '@/components/AnimatedViews';
 import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
+import { productsAPI } from '@/lib/api'; 
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
   ScrollView,
@@ -17,53 +20,75 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// Mock data - replace with API call
-const mockProduct = {
-  id: '1',
-  title: 'iPhone 13 Pro Max 256GB',
-  price: 899,
-  images: [
-    'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=800',
-    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800',
-    'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=800',
-  ],
-  description:
-    'iPhone 13 Pro Max in excellent condition. Barely used, comes with original box and all accessories. Battery health at 98%. No scratches or dents. Unlocked and ready to use with any carrier.',
-  condition: 'Used',
-  category: 'Electronics',
-  location: 'San Francisco, CA',
-  createdAt: '2 days ago',
-  seller: {
-    id: 'user1',
-    name: 'John Doe',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    rating: 4.8,
-    totalReviews: 124,
-    responseTime: '~1 hour',
-    verified: true,
-  },
-};
-
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [product, setProduct] = useState<any>(null);
+  const [productError, setProductError] = useState<string | null>(null);
+
+  // ✅ FETCH PRODUCT BY ID
+  const fetchProduct = async () => {
+    try {
+      setProductError(null);
+      setIsLoading(true);
+      const productData = await productsAPI.getProductById(id as string);
+      setProduct(productData);
+    } catch (error: any) {
+      console.error('Fetch product error:', error);
+      setProductError('Failed to load product. Please try again.');
+      Alert.alert('Error', 'Failed to load product. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ CHECK IF PRODUCT IS FAVORITED
+  const checkFavoriteStatus = async () => {
+    try {
+      const favorites = await AsyncStorage.getItem('favorites');
+      if (favorites) {
+        const favoritesArray = JSON.parse(favorites);
+        setIsFavorite(favoritesArray.includes(id));
+      }
+    } catch (error) {
+      console.error('Check favorite error:', error);
+    }
+  };
+
+  // ✅ TOGGLE FAVORITE
+  const toggleFavorite = async () => {
+    try {
+      const favorites = await AsyncStorage.getItem('favorites');
+      let favoritesArray = favorites ? JSON.parse(favorites) : [];
+      
+      if (isFavorite) {
+        favoritesArray = favoritesArray.filter((favId: string) => favId !== id);
+      } else {
+        favoritesArray.push(id);
+      }
+      
+      await AsyncStorage.setItem('favorites', JSON.stringify(favoritesArray));
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Toggle favorite error:', error);
+      Alert.alert('Error', 'Failed to update favorites');
+    }
+  };
 
   useEffect(() => {
-    // Simulate loading product details
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2200);
-
-    return () => clearTimeout(timer);
+    if (id) {
+      fetchProduct();
+      checkFavoriteStatus();
+    }
   }, [id]);
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${mockProduct.title} for $${mockProduct.price}`,
+        message: `Check out ${product?.title} for $${product?.price}`,
         url: `myapp://product/${id}`,
       });
     } catch (error) {
@@ -72,8 +97,8 @@ export default function ProductDetailScreen() {
   };
 
   const handleMessage = () => {
-    // Navigate to chat
-    router.push(`/chat/${mockProduct.seller.id}`);
+    // Navigate to chat with seller
+    router.push(`/chat/${product?.seller?.id}`);
   };
 
   if (isLoading) {
@@ -85,6 +110,21 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
         </View>
         <ProductDetailSkeleton />
+      </View>
+    );
+  }
+
+  if (productError || !product) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color="#B2BEC3" />
+        <Text style={styles.errorText}>{productError || 'Product not found'}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchProduct}
+        >
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -102,7 +142,7 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => setIsFavorite(!isFavorite)}
+            onPress={toggleFavorite}
           >
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
@@ -129,7 +169,7 @@ export default function ProductDetailScreen() {
               }}
               scrollEventThrottle={16}
             >
-              {mockProduct.images.map((image, index) => (
+              {product.images?.map((image: string, index: number) => (
                 <Image
                   key={index}
                   source={{ uri: image }}
@@ -140,7 +180,7 @@ export default function ProductDetailScreen() {
 
             {/* Image Indicators */}
             <View style={styles.imageIndicators}>
-              {mockProduct.images.map((_, index) => (
+              {product.images?.map((_: string, index: number) => (
                 <View
                   key={index}
                   style={[
@@ -153,7 +193,7 @@ export default function ProductDetailScreen() {
 
             {/* Condition Badge */}
             <View style={styles.conditionBadge}>
-              <Text style={styles.conditionText}>{mockProduct.condition}</Text>
+              <Text style={styles.conditionText}>{product.condition}</Text>
             </View>
           </View>
         </FadeInView>
@@ -161,25 +201,33 @@ export default function ProductDetailScreen() {
         {/* Product Info */}
         <SlideInView direction="up" delay={150}>
           <View style={styles.infoContainer}>
-          <Text style={styles.price}>${mockProduct.price.toLocaleString()}</Text>
-          <Text style={styles.title}>{mockProduct.title}</Text>
+            <Text style={styles.price}>${product.price.toLocaleString()}</Text>
+            <Text style={styles.title}>{product.title}</Text>
 
-          <View style={styles.metaInfo}>
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={16} color="#636E72" />
-              <Text style={styles.metaText}>{mockProduct.location}</Text>
+            <View style={styles.metaInfo}>
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={16} color="#636E72" />
+                <Text style={styles.metaText}>
+                  {product.location?.city}, {product.location?.state}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={16} color="#636E72" />
+                <Text style={styles.metaText}>
+                  {new Date(product.createdAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </View>
             </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={16} color="#636E72" />
-              <Text style={styles.metaText}>{mockProduct.createdAt}</Text>
-            </View>
-          </View>
 
-          {/* Category Tag */}
-          <View style={styles.categoryTag}>
-            <Ionicons name="pricetag-outline" size={14} color="#4ECDC4" />
-            <Text style={styles.categoryText}>{mockProduct.category}</Text>
-          </View>
+            {/* Category Tag */}
+            <View style={styles.categoryTag}>
+              <Ionicons name="pricetag-outline" size={14} color="#4ECDC4" />
+              <Text style={styles.categoryText}>{product.category}</Text>
+            </View>
           </View>
         </SlideInView>
 
@@ -187,32 +235,32 @@ export default function ProductDetailScreen() {
         <SlideInView direction="up" delay={250}>
           <TouchableOpacity
             style={styles.sellerContainer}
-            onPress={() => router.push(`/user/${mockProduct.seller.id}`)}
+            onPress={() => router.push(`/user/${product.seller?.id}`)}
           >
-          <View style={styles.sellerLeft}>
-            <Image
-              source={{ uri: mockProduct.seller.avatar }}
-              style={styles.sellerAvatar}
-            />
-            <View style={styles.sellerInfo}>
-              <View style={styles.sellerNameRow}>
-                <Text style={styles.sellerName}>{mockProduct.seller.name}</Text>
-                {mockProduct.seller.verified && (
-                  <Ionicons name="checkmark-circle" size={16} color="#4ECDC4" />
-                )}
-              </View>
-              <View style={styles.sellerMeta}>
-                <Ionicons name="star" size={14} color="#FFB84D" />
-                <Text style={styles.ratingText}>
-                  {mockProduct.seller.rating} ({mockProduct.seller.totalReviews})
+            <View style={styles.sellerLeft}>
+              <Image
+                source={{ uri: product.seller?.avatar || 'https://i.pravatar.cc/300?img=47' }}
+                style={styles.sellerAvatar}
+              />
+              <View style={styles.sellerInfo}>
+                <View style={styles.sellerNameRow}>
+                  <Text style={styles.sellerName}>{product.seller?.name}</Text>
+                  {product.seller?.verified && (
+                    <Ionicons name="checkmark-circle" size={16} color="#4ECDC4" />
+                  )}
+                </View>
+                <View style={styles.sellerMeta}>
+                  <Ionicons name="star" size={14} color="#FFB84D" />
+                  <Text style={styles.ratingText}>
+                    {product.seller?.rating || 0} ({product.seller?.totalReviews || 0})
+                  </Text>
+                </View>
+                <Text style={styles.responseTime}>
+                  Responds in {product.seller?.responseTime || '~1 hour'}
                 </Text>
               </View>
-              <Text style={styles.responseTime}>
-                Responds in {mockProduct.seller.responseTime}
-              </Text>
             </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
           </TouchableOpacity>
         </SlideInView>
 
@@ -220,7 +268,7 @@ export default function ProductDetailScreen() {
         <SlideInView direction="up" delay={350}>
           <View style={styles.descriptionContainer}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{mockProduct.description}</Text>
+            <Text style={styles.description}>{product.description}</Text>
           </View>
         </SlideInView>
 
@@ -490,5 +538,31 @@ const styles = StyleSheet.create({
   messageButton: {
     height: 56,
     borderRadius: 28,
+  },
+  // ✅ ADD ERROR STYLES
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#636E72',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4ECDC4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

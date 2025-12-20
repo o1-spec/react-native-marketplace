@@ -1,6 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react'; // ✅ ADD useRef
+import { authAPI, userAPI } from "@/lib/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"; // ✅ ADD useRef
 
 interface User {
   _id: string;
@@ -14,9 +22,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  isAuthenticated: boolean; // ✅ ADD THIS
-  isVerified: boolean; // ✅ ADD THIS
-  login: (token: string, user: User) => Promise<void>;
+  isAuthenticated: boolean;
+  isVerified: boolean;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: any }>;
   logout: () => Promise<void>;
   updateUser: (user: User) => Promise<void>;
   checkAuthState: () => Promise<void>;
@@ -27,7 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -40,47 +51,63 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const hasCheckedAuth = useRef(false); // ✅ PREVENT MULTIPLE CHECKS
+  const hasCheckedAuth = useRef(false);
 
   const isAuthenticated = !!token && !!user;
   const isVerified = user?.emailVerified ? true : false;
 
-  const login = async (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    await AsyncStorage.setItem('token', newToken);
-    await AsyncStorage.setItem('user', JSON.stringify(newUser));
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const data = await authAPI.login({ email, password });
+      await AsyncStorage.setItem("token", data.token);
+      const profileData = await userAPI.getProfile();
+      const fullUser = profileData.user;
+      await AsyncStorage.setItem("user", JSON.stringify(fullUser));
+      setUser(fullUser);
+      setToken(data.token);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Login error:", error);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = async () => {
     setToken(null);
     setUser(null);
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
-    hasCheckedAuth.current = false; // ✅ RESET FLAG
-    router.replace('/(auth)/login');
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user");
+    hasCheckedAuth.current = false;
+    router.replace("/(auth)/login");
   };
 
   const updateUser = async (updatedUser: User) => {
     setUser(updatedUser);
-    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+    await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
   const checkAuthState = async () => {
-    if (hasCheckedAuth.current) return; 
+    if (hasCheckedAuth.current) return;
     hasCheckedAuth.current = true;
 
     try {
-      const storedToken = await AsyncStorage.getItem('token');
-      const storedUser = await AsyncStorage.getItem('user');
+      const storedToken = await AsyncStorage.getItem("token");
 
-      if (storedToken && storedUser) {
-        const parsedUser = JSON.parse(storedUser);
+      if (storedToken) {
+        const profileData = await userAPI.getProfile();
+        const currentUser = profileData.user;
+
         setToken(storedToken);
-        setUser(parsedUser);
+        setUser(currentUser);
       }
     } catch (error) {
-      console.error('Error checking auth state:', error);
+      console.error("Error checking auth state:", error);
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
     } finally {
       setIsLoading(false);
     }
@@ -94,17 +121,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     token,
     isLoading,
-    isAuthenticated, 
-    isVerified, 
+    isAuthenticated,
+    isVerified,
     login,
     logout,
     updateUser,
     checkAuthState,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

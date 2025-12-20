@@ -1,4 +1,5 @@
 import AnimatedButton from '@/components/AnimatedButton';
+import { productsAPI } from '@/lib/api'; // ✅ ADD API IMPORT
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -47,6 +48,7 @@ export default function EditListingScreen() {
   const { id } = useLocalSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -55,43 +57,67 @@ export default function EditListingScreen() {
   const [condition, setCondition] = useState('Good');
   const [location, setLocation] = useState('');
   const [originalData, setOriginalData] = useState<ListingData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // ✅ UPLOAD IMAGE TO CLOUDINARY (REUSE FROM CREATE)
+  const uploadImageToCloudinary = async (uri: string): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      type: 'image/jpeg',
+      name: 'photo.jpg',
+    } as any);
+    formData.append('upload_preset', 'your_upload_preset'); // Replace with your preset
+    formData.append('cloud_name', 'your_cloud_name'); // Replace with your cloud name
+
+    const response = await fetch(
+      'https://api.cloudinary.com/v1_1/your_cloud_name/image/upload', // Replace with your URL
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    return data.secure_url;
+  };
+
+  // ✅ BATCH UPLOAD IMAGES
+  const uploadImages = async (uris: string[]): Promise<string[]> => {
+    try {
+      const uploadPromises = uris.map(uri => uploadImageToCloudinary(uri));
+      const urls = await Promise.all(uploadPromises);
+      return urls;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      throw new Error('Failed to upload images');
+    }
+  };
 
   useEffect(() => {
     loadListingData();
   }, [id]);
 
+  // ✅ LOAD LISTING DATA FROM API
   const loadListingData = async () => {
     try {
-      // Simulate API call to fetch listing data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLoadError(null);
+      setIsLoading(true);
 
-      // Mock data - replace with actual API call
-      const mockData: ListingData = {
-        id: id as string,
-        title: 'iPhone 13 Pro Max 256GB',
-        description: 'Excellent condition iPhone 13 Pro Max with 256GB storage. Comes with original box, charger, and all accessories. Minor wear on case but screen is perfect.',
-        price: 899,
-        category: 'Electronics',
-        condition: 'Good',
-        location: 'San Francisco, CA',
-        images: [
-          'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=400',
-          'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=400',
-        ],
-        createdAt: '2024-01-15T10:00:00Z',
-        updatedAt: '2024-01-15T10:00:00Z',
-      };
+      const productData = await productsAPI.getProductById(id as string);
 
       // Populate form with existing data
-      setTitle(mockData.title);
-      setDescription(mockData.description);
-      setPrice(mockData.price.toString());
-      setCategory(mockData.category);
-      setCondition(mockData.condition);
-      setLocation(mockData.location);
-      setImages(mockData.images);
-      setOriginalData(mockData);
-    } catch (error) {
+      setTitle(productData.title);
+      setDescription(productData.description);
+      setPrice(productData.price.toString());
+      setCategory(productData.category);
+      setCondition(productData.condition);
+      setLocation(`${productData.location?.city}, ${productData.location?.state}`);
+      setImages(productData.images || []);
+      setOriginalData(productData);
+    } catch (error: any) {
+      console.error('Load listing error:', error);
+      setLoadError('Failed to load listing data. Please try again.');
       Alert.alert('Error', 'Failed to load listing data');
       router.back();
     } finally {
@@ -183,11 +209,12 @@ export default function EditListingScreen() {
       price !== originalData.price.toString() ||
       category !== originalData.category ||
       condition !== originalData.condition ||
-      location !== originalData.location ||
+      location !== `${originalData.location}` ||
       JSON.stringify(images) !== JSON.stringify(originalData.images)
     );
   };
 
+  // ✅ SAVE CHANGES VIA API
   const handleSave = async () => {
     // Validation
     if (!title.trim()) {
@@ -214,20 +241,50 @@ export default function EditListingScreen() {
 
     setIsSaving(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Separate existing URLs from new URIs
+      const existingImages = images.filter(img => img.startsWith('http'));
+      const newImageUris = images.filter(img => !img.startsWith('http'));
 
-      // TODO: Update listing in backend
-      console.log('Updating listing:', {
-        id,
-        title,
-        description,
-        price,
+      // Upload new images
+      let allImageUrls = existingImages;
+      if (newImageUris.length > 0) {
+        const uploadedUrls = await uploadImages(newImageUris);
+        allImageUrls = [...existingImages, ...uploadedUrls];
+      }
+
+      // Parse location
+      const [city, state] = location.split(',').map(s => s.trim());
+      if (!city || !state) {
+        Alert.alert('Invalid Location', 'Please enter location as "City, State"');
+        return;
+      }
+
+      // Map condition to model format
+      const conditionMap: { [key: string]: string } = {
+        'New': 'new',
+        'Like New': 'like_new',
+        'Good': 'good',
+        'Fair': 'fair',
+        'Poor': 'poor'
+      };
+
+      // Prepare update data
+      const updateData = {
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
         category,
-        condition,
-        location,
-        images,
-      });
+        condition: conditionMap[condition] || 'good',
+        images: allImageUrls,
+        location: {
+          city,
+          state,
+          country: 'USA',
+        },
+      };
+
+      // Update product via API
+      await productsAPI.updateProduct(id as string, updateData);
 
       Alert.alert('Success!', 'Your listing has been updated', [
         {
@@ -235,13 +292,15 @@ export default function EditListingScreen() {
           onPress: () => router.back(),
         },
       ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update listing. Please try again.');
+    } catch (error: any) {
+      console.error('Save listing error:', error);
+      Alert.alert('Error', error.message || 'Failed to update listing. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
+  // ✅ DELETE LISTING VIA API
   const handleDelete = () => {
     Alert.alert(
       'Delete Listing',
@@ -252,14 +311,16 @@ export default function EditListingScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            setIsDeleting(true);
             try {
-              // Simulate API call
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-              // TODO: Delete listing from backend
+              await productsAPI.deleteProduct(id as string);
               Alert.alert('Deleted', 'Your listing has been deleted');
               router.push('/(tabs)');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete listing');
+            } catch (error: any) {
+              console.error('Delete listing error:', error);
+              Alert.alert('Error', error.message || 'Failed to delete listing');
+            } finally {
+              setIsDeleting(false);
             }
           },
         },
@@ -278,6 +339,21 @@ export default function EditListingScreen() {
     );
   }
 
+  if (loadError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color="#B2BEC3" />
+        <Text style={styles.errorText}>{loadError}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={loadListingData}
+        >
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -289,8 +365,12 @@ export default function EditListingScreen() {
           <Ionicons name="arrow-back" size={24} color="#2D3436" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Listing</Text>
-        <TouchableOpacity onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
+        <TouchableOpacity onPress={handleDelete} disabled={isDeleting}>
+          <Ionicons 
+            name={isDeleting ? "refresh" : "trash-outline"} 
+            size={24} 
+            color={isDeleting ? "#B2BEC3" : "#FF6B6B"} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -718,5 +798,30 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#636E72',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4ECDC4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -40,6 +40,7 @@ export const API_ENDPOINTS = {
     SEARCH: "/api/products/search",
     CATEGORIES: "/api/products/categories",
   },
+  PRODUCTS_MY_LISTINGS: "/api/products/my-listings",
 } as const;
 
 export const buildUrl = (endpoint: string): string => {
@@ -65,11 +66,11 @@ export const apiRequest = async (
   endpoint: string,
   options: RequestInit = {}
 ): Promise<any> => {
- const token = await AsyncStorage.getItem('token');
-  
+  const token = await AsyncStorage.getItem("token");
+
   const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
   const url = buildUrl(endpoint);
 
@@ -80,7 +81,6 @@ export const apiRequest = async (
       ...options.headers,
     },
   };
-
 
   try {
     const controller = new AbortController();
@@ -221,28 +221,43 @@ export const notificationsAPI = {
 };
 
 export const productsAPI = {
-  getAll: (params?: Record<string, any>) => {
-    const queryString = params ? `?${new URLSearchParams(params)}` : "";
-    return apiRequest(`${API_ENDPOINTS.PRODUCTS.LIST}${queryString}`);
+  getProducts: (params?: any) => {
+    const queryString = params ? new URLSearchParams(params).toString() : "";
+    return apiRequest(`${API_ENDPOINTS.PRODUCTS.LIST}?${queryString}`);
   },
 
-  create: (data: FormData) =>
+  getProduct: (id: string) => apiRequest(API_ENDPOINTS.PRODUCTS.DETAIL(id)),
+
+  createProduct: (data: any) =>
     apiRequest(API_ENDPOINTS.PRODUCTS.CREATE, {
       method: "POST",
-      body: data,
-      headers: {},
+      body: JSON.stringify(data),
     }),
 
-  getById: (id: string) => apiRequest(API_ENDPOINTS.PRODUCTS.DETAIL(id)),
+  getProductById: (id: string) => apiRequest(`/api/products/${id}`),
 
-  update: (id: string, data: any) =>
+  updateProduct: (id: string, data: any) =>
     apiRequest(API_ENDPOINTS.PRODUCTS.UPDATE(id), {
       method: "PUT",
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) =>
+  deleteProduct: (id: string) =>
     apiRequest(API_ENDPOINTS.PRODUCTS.DELETE(id), {
       method: "DELETE",
+    }),
+
+  getMyListings: (params?: any) => {
+    const queryString = params ? new URLSearchParams(params).toString() : "";
+    return apiRequest(`${API_ENDPOINTS.PRODUCTS_MY_LISTINGS}?${queryString}`);
+  },
+};
+
+export const userAPI = {
+  getProfile: () => apiRequest("/api/users/profile"),
+  updateProfile: (data: any) =>
+    apiRequest(API_ENDPOINTS.USERS.UPDATE_PROFILE, {
+      method: "PUT",
+      body: JSON.stringify(data),
     }),
 };

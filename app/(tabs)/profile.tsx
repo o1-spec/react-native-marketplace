@@ -1,5 +1,9 @@
-import AnimatedButton from '@/components/AnimatedButton';
+import AnimatedButton from "@/components/AnimatedButton";
+import { productsAPI, userAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -11,58 +15,138 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-// Mock user data - replace with API call later
-const mockUser = {
-  id: "me",
-  name: "Sarah Johnson",
-  email: "sarah.johnson@email.com",
-  avatar: "https://i.pravatar.cc/300?img=47",
-  bio: "Passionate seller of quality electronics and gadgets. Always responsive!",
-  location: "San Francisco, CA",
-  phoneNumber: "+1 (555) 123-4567",
-  rating: 4.8,
-  totalReviews: 124,
-  totalSales: 89,
-  memberSince: "Jan 2023",
-  verified: true,
-};
-
-const mockListings = [
-  {
-    id: "1",
-    title: "iPhone 13 Pro Max 256GB",
-    price: 899,
-    image: "https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=400",
-    status: "active",
-    views: 245,
-  },
-  {
-    id: "2",
-    title: 'MacBook Pro 14" M1 Pro',
-    price: 1899,
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400",
-    status: "active",
-    views: 189,
-  },
-  {
-    id: "3",
-    title: "iPad Air 5th Gen",
-    price: 499,
-    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400",
-    status: "sold",
-    views: 312,
-  },
-];
+import Toast from "react-native-toast-message";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"listings" | "sold">("listings");
+  const [updatingAvatar, setUpdatingAvatar] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [listings, setListings] = useState<any[]>([]);
+  const [userLoading, setUserLoading] = useState(true);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [userError, setUserError] = useState<string | null>(null);
+  const [listingsError, setListingsError] = useState<string | null>(null);
 
-  const activeListings = mockListings.filter(
-    (item) => item.status === "active"
-  );
-  const soldListings = mockListings.filter((item) => item.status === "sold");
+  const fetchUserProfile = async () => {
+    try {
+      setUserError(null);
+      const userData = await userAPI.getProfile();
+      setUser(userData.user);
+    } catch (error: any) {
+      console.error("Fetch user profile error:", error);
+      setUserError("Failed to load profile");
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to load profile',
+      });
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  const fetchUserListings = async () => {
+    try {
+      setListingsError(null);
+      const response = await productsAPI.getMyListings();
+      setListings(response.products || []);
+    } catch (error: any) {
+      console.error("Fetch user listings error:", error);
+      setListingsError("Failed to load listings");
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to load listings',
+      });
+    } finally {
+      setListingsLoading(false);
+    }
+  };
+
+   useFocusEffect(() => {
+    fetchUserProfile();
+    fetchUserListings();
+  });
+
+  const activeListings = listings.filter((item) => item.status === "active");
+  const soldListings = listings.filter((item) => item.status === "sold");
+
+  const uploadAvatarToCloudinary = async (uri: string): Promise<string> => {
+    const formData = new FormData();
+
+    const fileExtension = uri.split(".").pop() || "jpg";
+    const fileName = `profile_${Date.now()}.${fileExtension}`;
+
+    formData.append("file", {
+      uri,
+      type: `image/${fileExtension}`,
+      name: fileName,
+    } as any);
+
+    const response = await fetch(
+      "http://localhost:3000/api/upload?folder=profiles",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleAvatarChange = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Toast.show({
+          type: 'error',
+          text1: 'Permission Denied',
+          text2: 'Permission to access media library is required!',
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setUpdatingAvatar(true);
+        const imageUri = result.assets[0].uri;
+
+        const avatarUrl = await uploadAvatarToCloudinary(imageUri);
+
+        await userAPI.updateProfile({ avatar: avatarUrl });
+
+        setUser((prev: any) => ({ ...prev, avatar: avatarUrl }));
+
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Avatar updated successfully!',
+        });
+      }
+    } catch (error: any) {
+      console.error("Avatar update error:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to update avatar. Please try again.',
+      });
+    } finally {
+      setUpdatingAvatar(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -70,9 +154,18 @@ export default function ProfileScreen() {
       {
         text: "Logout",
         style: "destructive",
-        onPress: () => {
-          // TODO: Clear auth state
-          router.replace("/(auth)/login");
+        onPress: async () => {
+          try {
+            await AsyncStorage.removeItem("authToken");
+            router.replace("/(auth)/login");
+          } catch (error) {
+            console.error("Logout error:", error);
+            Toast.show({
+              type: 'error',
+              text1: 'Error',
+              text2: 'Failed to logout. Please try again.',
+            });
+          }
         },
       },
     ]);
@@ -84,7 +177,10 @@ export default function ProfileScreen() {
       style={styles.listingCard}
       onPress={() => router.push(`/product/${item.id}`)}
     >
-      <Image source={{ uri: item.image }} style={styles.listingImage} />
+      <Image
+        source={{ uri: item.images?.[0] || "" }}
+        style={styles.listingImage}
+      />
       <View style={styles.listingInfo}>
         <Text style={styles.listingTitle} numberOfLines={2}>
           {item.title}
@@ -92,7 +188,7 @@ export default function ProfileScreen() {
         <Text style={styles.listingPrice}>${item.price.toLocaleString()}</Text>
         <View style={styles.listingMeta}>
           <Ionicons name="eye-outline" size={14} color="#636E72" />
-          <Text style={styles.listingViews}>{item.views} views</Text>
+          <Text style={styles.listingViews}>{item.views || 0} views</Text>
         </View>
       </View>
       {item.status === "sold" && (
@@ -108,6 +204,27 @@ export default function ProfileScreen() {
       </TouchableOpacity>
     </TouchableOpacity>
   );
+
+  // ✅ ADD LOADING AND ERROR STATES
+  if (userLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
+  if (userError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color="#B2BEC3" />
+        <Text style={styles.errorText}>{userError}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchUserProfile}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -126,23 +243,46 @@ export default function ProfileScreen() {
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: mockUser.avatar }} style={styles.avatar} />
-            {mockUser.verified && (
+            <TouchableOpacity
+              onPress={handleAvatarChange}
+              disabled={updatingAvatar}
+            >
+              <Image
+                source={{ uri: user.avatar || "" }}
+                style={[
+                  styles.avatar,
+                  !user.avatar && styles.avatarPlaceholder,
+                ]}
+              />
+              {!user.avatar && (
+                <View style={styles.avatarPlaceholderContent}>
+                  <Ionicons name="person" size={40} color="#B2BEC3" />
+                </View>
+              )}
+              <View style={styles.editAvatarButton}>
+                <Ionicons name="camera" size={16} color="#fff" />
+              </View>
+            </TouchableOpacity>
+            {user.verified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark-circle" size={24} color="#4ECDC4" />
               </View>
             )}
+            {updatingAvatar && (
+              <View style={styles.avatarLoading}>
+                <Ionicons name="refresh" size={24} color="#4ECDC4" />
+              </View>
+            )}
           </View>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
 
-          <Text style={styles.userName}>{mockUser.name}</Text>
-          <Text style={styles.userEmail}>{mockUser.email}</Text>
-
-          {mockUser.bio && <Text style={styles.userBio}>{mockUser.bio}</Text>}
+          {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
 
           {/* Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{mockUser.rating}</Text>
+              <Text style={styles.statValue}>{user.rating || 0}</Text>
               <View style={styles.statLabelRow}>
                 <Ionicons name="star" size={14} color="#FFB84D" />
                 <Text style={styles.statLabel}>Rating</Text>
@@ -150,22 +290,21 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{mockUser.totalReviews}</Text>
+              <Text style={styles.statValue}>{user.totalReviews || 0}</Text>
               <Text style={styles.statLabel}>Reviews</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{mockUser.totalSales}</Text>
+              <Text style={styles.statValue}>{user.totalSales || 0}</Text>
               <Text style={styles.statLabel}>Sales</Text>
             </View>
           </View>
 
-          {/* Edit Profile Button */}
           <AnimatedButton
             title="Edit Profile"
             icon="create-outline"
             variant="secondary"
-            onPress={() => router.push("/(auth)/complete-profile")}
+            onPress={() => router.push("/profile/edit")}
           />
         </View>
 
@@ -177,7 +316,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{mockUser.location}</Text>
+              <Text style={styles.infoValue}>{user.location || "Not set"}</Text>
             </View>
           </View>
 
@@ -187,7 +326,9 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>{mockUser.phoneNumber}</Text>
+              <Text style={styles.infoValue}>
+                {user.phoneNumber || "Not set"}
+              </Text>
             </View>
           </View>
 
@@ -197,12 +338,18 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Member Since</Text>
-              <Text style={styles.infoValue}>{mockUser.memberSince}</Text>
+              <Text style={styles.infoValue}>
+                {user.createdAt
+                  ? new Date(user.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "Unknown"}
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* My Listings Section */}
         <View style={styles.listingsSection}>
           <Text style={styles.sectionTitle}>My Listings</Text>
 
@@ -237,32 +384,55 @@ export default function ProfileScreen() {
           </View>
 
           {/* Listings Grid */}
-          <View style={styles.listingsGrid}>
-            {activeTab === "listings"
-              ? activeListings.map(renderListingCard)
-              : soldListings.map(renderListingCard)}
-          </View>
-
-          {/* Empty State */}
-          {((activeTab === "listings" && activeListings.length === 0) ||
-            (activeTab === "sold" && soldListings.length === 0)) && (
-            <View style={styles.emptyState}>
-              <Ionicons name="cube-outline" size={64} color="#B2BEC3" />
-              <Text style={styles.emptyText}>
-                {activeTab === "listings"
-                  ? "No active listings yet"
-                  : "No sold items yet"}
-              </Text>
-              {activeTab === "listings" && (
-                <AnimatedButton
-                  title="Create Listing"
-                  icon="add-circle"
-                  onPress={() => router.push("/(tabs)/create")}
-                  size="large"
-                />
-              )}
+          {listingsLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading listings...</Text>
+            </View>
+          ) : listingsError ? (
+            <View style={styles.errorContainer}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={48}
+                color="#B2BEC3"
+              />
+              <Text style={styles.errorText}>{listingsError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={fetchUserListings}
+              >
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.listingsGrid}>
+              {activeTab === "listings"
+                ? activeListings.map(renderListingCard)
+                : soldListings.map(renderListingCard)}
             </View>
           )}
+
+          {/* Empty State */}
+          {!listingsLoading &&
+            !listingsError &&
+            ((activeTab === "listings" && activeListings.length === 0) ||
+              (activeTab === "sold" && soldListings.length === 0)) && (
+              <View style={styles.emptyState}>
+                <Ionicons name="cube-outline" size={64} color="#B2BEC3" />
+                <Text style={styles.emptyText}>
+                  {activeTab === "listings"
+                    ? "No active listings yet"
+                    : "No sold items yet"}
+                </Text>
+                {activeTab === "listings" && (
+                  <AnimatedButton
+                    title="Create Listing"
+                    icon="add-circle"
+                    onPress={() => router.push("/(tabs)/create")}
+                    size="large"
+                  />
+                )}
+              </View>
+            )}
         </View>
 
         {/* Actions Section */}
@@ -598,5 +768,76 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#636E72",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+    backgroundColor: "#FAFAFA",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#636E72",
+    textAlign: "center",
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#4ECDC4",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  avatarPlaceholder: {
+    backgroundColor: "#F5F5F5",
+  },
+  avatarPlaceholderContent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editAvatarButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#4ECDC4",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  avatarLoading: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 50,
   },
 });

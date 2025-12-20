@@ -1,5 +1,7 @@
 import AnimatedButton from "@/components/AnimatedButton";
+import { productsAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -15,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 const categories = [
   { id: "1", name: "Electronics", icon: "laptop-outline" },
@@ -40,22 +43,85 @@ export default function CreateListingScreen() {
   const [location, setLocation] = useState("");
   const [isPosting, setIsPosting] = useState(false);
 
+  const [brand, setBrand] = useState("");
+  const [modelNumber, setModelNumber] = useState("");
+  const [shippingAvailable, setShippingAvailable] = useState(false);
+  const [shippingCost, setShippingCost] = useState("");
+  const [pickupOnly, setPickupOnly] = useState(false);
+  const [isNegotiable, setIsNegotiable] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+
+  const uploadImageToCloudinary = async (uri: string): Promise<string> => {
+    const formData = new FormData();
+
+    const fileExtension = uri.split(".").pop() || "jpg";
+    const fileName = `listing_${Date.now()}.${fileExtension}`;
+
+    formData.append("file", {
+      uri,
+      type: `image/${fileExtension}`,
+      name: fileName,
+    } as any);
+
+    const token = await AsyncStorage.getItem("token");
+
+    const response = await fetch(
+      "http://localhost:3000/api/upload?folder=listings",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
+
+  const uploadImages = async (uris: string[]): Promise<string[]> => {
+    setUploadingImages(true);
+    try {
+      const uploadPromises = uris.map((uri) => uploadImageToCloudinary(uri));
+      const urls = await Promise.all(uploadPromises);
+      return urls;
+    } catch (error) {
+      console.error("Image upload error:", error);
+      throw new Error("Failed to upload images");
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
   const pickImages = async () => {
     if (images.length >= 5) {
-      Alert.alert("Maximum Images", "You can only upload up to 5 images");
+      Toast.show({
+        type: "error",
+        text1: "Maximum Images",
+        text2: "You can only upload up to 5 images",
+      });
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow access to your photos");
+      Toast.show({
+        type: "error",
+        text1: "Permission needed",
+        text2: "Please allow access to your photos",
+      });
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: false,
       aspect: [4, 3],
       quality: 0.8,
       allowsMultipleSelection: true,
@@ -70,14 +136,22 @@ export default function CreateListingScreen() {
 
   const takePhoto = async () => {
     if (images.length >= 5) {
-      Alert.alert("Maximum Images", "You can only upload up to 5 images");
+      Toast.show({
+        type: "error",
+        text1: "Maximum Images",
+        text2: "You can only upload up to 5 images",
+      });
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
     if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow access to your camera");
+      Toast.show({
+        type: "error",
+        text1: "Permission needed",
+        text2: "Please allow access to your camera",
+      });
       return;
     }
 
@@ -105,38 +179,96 @@ export default function CreateListingScreen() {
   };
 
   const handlePost = async () => {
-    // Validation
     if (!title.trim()) {
-      Alert.alert("Missing Title", "Please enter a title for your listing");
+      Toast.show({
+        type: "error",
+        text1: "Missing Title",
+        text2: "Please enter a title for your listing",
+      });
       return;
     }
     if (!price.trim()) {
-      Alert.alert("Missing Price", "Please enter a price");
+      Toast.show({
+        type: "error",
+        text1: "Missing Price",
+        text2: "Please enter a price",
+      });
       return;
     }
     if (images.length === 0) {
-      Alert.alert("Missing Images", "Please add at least one photo");
+      Toast.show({
+        type: "error",
+        text1: "Missing Images",
+        text2: "Please add at least one photo",
+      });
       return;
     }
     if (!category) {
-      Alert.alert("Missing Category", "Please select a category");
+      Toast.show({
+        type: "error",
+        text1: "Missing Category",
+        text2: "Please select a category",
+      });
+      return;
+    }
+    if (!location.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Missing Location",
+        text2: "Please enter your location",
+      });
+      return;
+    }
+
+    const [city, state] = location.split(",").map((s) => s.trim());
+    if (!city || !state) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid Location",
+        text2: "Please enter location as 'City, State'",
+      });
       return;
     }
 
     setIsPosting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const imageUrls = await uploadImages(images);
 
-      // TODO: Upload to backend
-      console.log("Posting listing:", {
-        title,
-        description,
-        price,
+      const conditionMap: { [key: string]: string } = {
+        New: "new",
+        "Like New": "like_new",
+        Good: "good",
+        Fair: "fair",
+        Poor: "poor",
+      };
+
+      const productData = {
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
         category,
-        condition,
-        location,
-        images,
+        condition: conditionMap[condition] || "good",
+        brand: brand.trim() || undefined,
+        modelNumber: modelNumber.trim() || undefined,
+        images: imageUrls,
+        location: {
+          city,
+          state,
+          country: "NGA",
+        },
+        shippingAvailable,
+        shippingCost: shippingCost ? parseFloat(shippingCost) : undefined,
+        pickupOnly,
+        isNegotiable,
+        tags: [],
+      };
+
+      const response = await productsAPI.createProduct(productData);
+
+      Toast.show({
+        type: "success",
+        text1: "Success!",
+        text2: "Your listing has been posted",
       });
 
       Alert.alert("Success!", "Your listing has been posted", [
@@ -151,18 +283,27 @@ export default function CreateListingScreen() {
             setCategory("");
             setCondition("Good");
             setLocation("");
-            // Navigate to home
+            setBrand("");
+            setModelNumber("");
+            setShippingAvailable(false);
+            setShippingCost("");
+            setPickupOnly(false);
+            setIsNegotiable(false);
             router.push("/(tabs)");
           },
         },
       ]);
-    } catch (error) {
-      Alert.alert("Error", "Failed to post listing. Please try again.");
+    } catch (error: any) {
+      console.error("Create listing error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to post listing. Please try again.",
+      });
     } finally {
       setIsPosting(false);
     }
   };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -339,9 +480,98 @@ export default function CreateListingScreen() {
           </ScrollView>
         </View>
 
+        {/* Brand */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Brand (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., Apple, Nike"
+            placeholderTextColor="#B2BEC3"
+            value={brand}
+            onChangeText={setBrand}
+          />
+        </View>
+
+        {/* Model */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Model (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., iPhone 13, Air Jordan"
+            placeholderTextColor="#B2BEC3"
+            value={modelNumber}
+            onChangeText={setModelNumber}
+          />
+        </View>
+
+        {/* Shipping Options */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Shipping</Text>
+          <View style={styles.shippingOptions}>
+            <TouchableOpacity
+              style={styles.optionRow}
+              onPress={() => setPickupOnly(!pickupOnly)}
+            >
+              <Ionicons
+                name={pickupOnly ? "checkbox" : "square-outline"}
+                size={20}
+                color={pickupOnly ? "#4ECDC4" : "#636E72"}
+              />
+              <Text style={styles.optionText}>Pickup Only</Text>
+            </TouchableOpacity>
+
+            {!pickupOnly && (
+              <>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => setShippingAvailable(!shippingAvailable)}
+                >
+                  <Ionicons
+                    name={shippingAvailable ? "checkbox" : "square-outline"}
+                    size={20}
+                    color={shippingAvailable ? "#4ECDC4" : "#636E72"}
+                  />
+                  <Text style={styles.optionText}>Shipping Available</Text>
+                </TouchableOpacity>
+
+                {shippingAvailable && (
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.priceInput}
+                      placeholder="Shipping cost"
+                      placeholderTextColor="#B2BEC3"
+                      value={shippingCost}
+                      onChangeText={setShippingCost}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Negotiable */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.optionRow}
+            onPress={() => setIsNegotiable(!isNegotiable)}
+          >
+            <Ionicons
+              name={isNegotiable ? "checkbox" : "square-outline"}
+              size={20}
+              color={isNegotiable ? "#4ECDC4" : "#636E72"}
+            />
+            <Text style={styles.optionText}>Price is negotiable</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Location */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.sectionTitle}>
+            Location <Text style={styles.required}>*</Text>
+          </Text>
           <View style={styles.locationContainer}>
             <Ionicons name="location-outline" size={20} color="#636E72" />
             <TextInput
@@ -359,16 +589,18 @@ export default function CreateListingScreen() {
 
         <View style={styles.section}>
           <AnimatedButton
-            title="Post Listing"
+            title={uploadingImages ? "Uploading Images..." : "Post Listing"}
             icon="checkmark-circle"
             onPress={handlePost}
-            loading={isPosting}
+            loading={isPosting || uploadingImages}
             disabled={
               isPosting ||
+              uploadingImages ||
               !title.trim() ||
               !price.trim() ||
               images.length === 0 ||
-              !category
+              !category ||
+              !location.trim()
             }
             fullWidth
             size="large"
@@ -564,6 +796,19 @@ const styles = StyleSheet.create({
   },
   conditionTextActive: {
     color: "#4ECDC4",
+  },
+  shippingOptions: {
+    gap: 16,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  optionText: {
+    fontSize: 15,
+    color: "#2D3436",
+    fontWeight: "500",
   },
   locationContainer: {
     flexDirection: "row",

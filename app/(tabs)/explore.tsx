@@ -1,6 +1,7 @@
+import { productsAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -8,9 +9,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-
 const categories = [
   {
     id: "1",
@@ -100,6 +100,49 @@ export default function ExploreScreen() {
     datePosted: "",
     sortBy: "relevance",
   });
+  const [categoryCounts, setCategoryCounts] = useState<{
+    [key: string]: number;
+  }>({});
+  const [isLoadingCounts, setIsLoadingCounts] = useState(true);
+
+  useEffect(() => {
+    fetchCategoryCounts();
+  }, []);
+
+  const fetchCategoryCounts = async () => {
+    try {
+      setIsLoadingCounts(true);
+      const counts: { [key: string]: number } = {};
+
+      const countPromises = categories.map(async (category) => {
+        try {
+          const response = await productsAPI.getProducts({
+            category: category.name,
+            limit: 1,
+          });
+          return { name: category.name, count: response.pagination.total };
+        } catch (error) {
+          return { name: category.name, count: category.count };
+        }
+      });
+
+      const results = await Promise.all(countPromises);
+      results.forEach((result) => {
+        counts[result.name] = result.count;
+      });
+
+      setCategoryCounts(counts);
+    } catch (error) {
+      console.error("Fetch category counts error:", error);
+      const fallbackCounts: { [key: string]: number } = {};
+      categories.forEach((cat) => {
+        fallbackCounts[cat.name] = cat.count;
+      });
+      setCategoryCounts(fallbackCounts);
+    } finally {
+      setIsLoadingCounts(false);
+    }
+  };
 
   const handleCategoryPress = (category: any) => {
     router.push({
@@ -138,11 +181,11 @@ export default function ExploreScreen() {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       router.push({
-        pathname: '/search',
-        params: { 
+        pathname: "/search",
+        params: {
           query: searchQuery.trim(),
-          type: 'search'
-        }
+          type: "search",
+        },
       });
     }
   };
@@ -150,10 +193,10 @@ export default function ExploreScreen() {
   const handleSeeAllCategories = () => {
     router.push({
       pathname: "/search",
-      params: { 
+      params: {
         type: "all-categories",
-        value: "all"
-      }
+        value: "all",
+      },
     });
   };
 
@@ -170,7 +213,7 @@ export default function ExploreScreen() {
 
   const handleApplyFilters = () => {
     const params: any = { type: "advanced" };
-    
+
     if (filters.minPrice || filters.maxPrice) {
       params.priceRange = `${filters.minPrice || 0}-${filters.maxPrice || ""}`;
     }
@@ -201,7 +244,7 @@ export default function ExploreScreen() {
   };
 
   const updateFilter = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -216,7 +259,9 @@ export default function ExploreScreen() {
           <Ionicons name="options-outline" size={24} color="#2D3436" />
           {getActiveFiltersCount() > 0 && (
             <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{getActiveFiltersCount()}</Text>
+              <Text style={styles.filterBadgeText}>
+                {getActiveFiltersCount()}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
@@ -272,7 +317,12 @@ export default function ExploreScreen() {
                   />
                 </View>
                 <Text style={styles.categoryName}>{category.name}</Text>
-                <Text style={styles.categoryCount}>{category.count} items</Text>
+                <Text style={styles.categoryCount}>
+                  {isLoadingCounts
+                    ? "..."
+                    : categoryCounts[category.name] || category.count}{" "}
+                  items
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -463,7 +513,10 @@ export default function ExploreScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.modalContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Price Range */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Price Range</Text>
@@ -476,7 +529,7 @@ export default function ExploreScreen() {
                       style={styles.priceInput}
                       placeholder="0"
                       value={filters.minPrice}
-                      onChangeText={(value) => updateFilter('minPrice', value)}
+                      onChangeText={(value) => updateFilter("minPrice", value)}
                       keyboardType="numeric"
                     />
                   </View>
@@ -489,7 +542,7 @@ export default function ExploreScreen() {
                       style={styles.priceInput}
                       placeholder="No limit"
                       value={filters.maxPrice}
-                      onChangeText={(value) => updateFilter('maxPrice', value)}
+                      onChangeText={(value) => updateFilter("maxPrice", value)}
                       keyboardType="numeric"
                     />
                   </View>
@@ -506,21 +559,34 @@ export default function ExploreScreen() {
                     key={condition.id}
                     style={[
                       styles.conditionOption,
-                      filters.condition === condition.label && styles.activeConditionOption,
+                      filters.condition === condition.label &&
+                        styles.activeConditionOption,
                     ]}
-                    onPress={() => updateFilter('condition', 
-                      filters.condition === condition.label ? '' : condition.label
-                    )}
+                    onPress={() =>
+                      updateFilter(
+                        "condition",
+                        filters.condition === condition.label
+                          ? ""
+                          : condition.label
+                      )
+                    }
                   >
                     <Ionicons
                       name={condition.icon as any}
                       size={20}
-                      color={filters.condition === condition.label ? '#4ECDC4' : '#636E72'}
+                      color={
+                        filters.condition === condition.label
+                          ? "#4ECDC4"
+                          : "#636E72"
+                      }
                     />
-                    <Text style={[
-                      styles.conditionOptionText,
-                      filters.condition === condition.label && styles.activeConditionOptionText,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.conditionOptionText,
+                        filters.condition === condition.label &&
+                          styles.activeConditionOptionText,
+                      ]}
+                    >
                       {condition.label}
                     </Text>
                   </TouchableOpacity>
@@ -537,24 +603,28 @@ export default function ExploreScreen() {
                   style={styles.locationInput}
                   placeholder="City, State or ZIP code"
                   value={filters.location}
-                  onChangeText={(value) => updateFilter('location', value)}
+                  onChangeText={(value) => updateFilter("location", value)}
                 />
               </View>
               <View style={styles.distanceOptions}>
                 <Text style={styles.distanceLabel}>Distance:</Text>
-                {['5', '10', '25', '50'].map((distance) => (
+                {["5", "10", "25", "50"].map((distance) => (
                   <TouchableOpacity
                     key={distance}
                     style={[
                       styles.distanceOption,
-                      filters.distance === distance && styles.activeDistanceOption,
+                      filters.distance === distance &&
+                        styles.activeDistanceOption,
                     ]}
-                    onPress={() => updateFilter('distance', distance)}
+                    onPress={() => updateFilter("distance", distance)}
                   >
-                    <Text style={[
-                      styles.distanceOptionText,
-                      filters.distance === distance && styles.activeDistanceOptionText,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.distanceOptionText,
+                        filters.distance === distance &&
+                          styles.activeDistanceOptionText,
+                      ]}
+                    >
                       {distance} miles
                     </Text>
                   </TouchableOpacity>
@@ -567,23 +637,27 @@ export default function ExploreScreen() {
               <Text style={styles.filterSectionTitle}>Date Posted</Text>
               <View style={styles.dateOptions}>
                 {[
-                  { label: 'Any time', value: '' },
-                  { label: 'Today', value: 'today' },
-                  { label: 'This week', value: 'week' },
-                  { label: 'This month', value: 'month' },
+                  { label: "Any time", value: "" },
+                  { label: "Today", value: "today" },
+                  { label: "This week", value: "week" },
+                  { label: "This month", value: "month" },
                 ].map((option) => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
                       styles.dateOption,
-                      filters.datePosted === option.value && styles.activeDateOption,
+                      filters.datePosted === option.value &&
+                        styles.activeDateOption,
                     ]}
-                    onPress={() => updateFilter('datePosted', option.value)}
+                    onPress={() => updateFilter("datePosted", option.value)}
                   >
-                    <Text style={[
-                      styles.dateOptionText,
-                      filters.datePosted === option.value && styles.activeDateOptionText,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.dateOptionText,
+                        filters.datePosted === option.value &&
+                          styles.activeDateOptionText,
+                      ]}
+                    >
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -596,24 +670,28 @@ export default function ExploreScreen() {
               <Text style={styles.filterSectionTitle}>Sort By</Text>
               <View style={styles.sortOptions}>
                 {[
-                  { label: 'Relevance', value: 'relevance' },
-                  { label: 'Price: Low to High', value: 'price-low' },
-                  { label: 'Price: High to Low', value: 'price-high' },
-                  { label: 'Date: Newest First', value: 'date-new' },
-                  { label: 'Distance', value: 'distance' },
+                  { label: "Relevance", value: "relevance" },
+                  { label: "Price: Low to High", value: "price-low" },
+                  { label: "Price: High to Low", value: "price-high" },
+                  { label: "Date: Newest First", value: "date-new" },
+                  { label: "Distance", value: "distance" },
                 ].map((option) => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
                       styles.sortOption,
-                      filters.sortBy === option.value && styles.activeSortOption,
+                      filters.sortBy === option.value &&
+                        styles.activeSortOption,
                     ]}
-                    onPress={() => updateFilter('sortBy', option.value)}
+                    onPress={() => updateFilter("sortBy", option.value)}
                   >
-                    <Text style={[
-                      styles.sortOptionText,
-                      filters.sortBy === option.value && styles.activeSortOptionText,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.sortOptionText,
+                        filters.sortBy === option.value &&
+                          styles.activeSortOptionText,
+                      ]}
+                    >
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -672,20 +750,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   filterBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   filterBadgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   searchContainer: {
     flexDirection: "row",
@@ -894,29 +972,29 @@ const styles = StyleSheet.create({
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   modalBackButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
   },
   clearButton: {
     paddingHorizontal: 12,
@@ -924,8 +1002,8 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 14,
-    color: '#FF6B6B',
-    fontWeight: '600',
+    color: "#FF6B6B",
+    fontWeight: "600",
   },
   modalContent: {
     flex: 1,
@@ -936,12 +1014,12 @@ const styles = StyleSheet.create({
   },
   filterSectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
     marginBottom: 12,
   },
   priceInputs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   priceInputContainer: {
@@ -949,15 +1027,15 @@ const styles = StyleSheet.create({
   },
   priceInputLabel: {
     fontSize: 14,
-    color: '#636E72',
+    color: "#636E72",
     marginBottom: 8,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -965,155 +1043,155 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: 16,
-    color: '#636E72',
-    fontWeight: '600',
+    color: "#636E72",
+    fontWeight: "600",
   },
   priceInput: {
     flex: 1,
     fontSize: 16,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   locationInput: {
     flex: 1,
     fontSize: 16,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   distanceOptions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 12,
     gap: 8,
   },
   distanceLabel: {
     fontSize: 14,
-    color: '#636E72',
+    color: "#636E72",
     marginRight: 8,
   },
   distanceOption: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
   },
   activeDistanceOption: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
+    borderColor: "#4ECDC4",
   },
   distanceOptionText: {
     fontSize: 12,
-    color: '#636E72',
-    fontWeight: '600',
+    color: "#636E72",
+    fontWeight: "600",
   },
   activeDistanceOptionText: {
-    color: '#fff',
+    color: "#fff",
   },
   conditionOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   conditionOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
   },
   activeConditionOption: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
+    borderColor: "#4ECDC4",
   },
   conditionOptionText: {
     fontSize: 14,
-    color: '#636E72',
-    fontWeight: '600',
+    color: "#636E72",
+    fontWeight: "600",
   },
   activeConditionOptionText: {
-    color: '#fff',
+    color: "#fff",
   },
   dateOptions: {
     gap: 8,
   },
   dateOption: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
   },
   activeDateOption: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
+    borderColor: "#4ECDC4",
   },
   dateOptionText: {
     fontSize: 14,
-    color: '#636E72',
-    fontWeight: '600',
+    color: "#636E72",
+    fontWeight: "600",
   },
   activeDateOptionText: {
-    color: '#fff',
+    color: "#fff",
   },
   sortOptions: {
     gap: 8,
   },
   sortOption: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
   },
   activeSortOption: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
+    borderColor: "#4ECDC4",
   },
   sortOptionText: {
     fontSize: 14,
-    color: '#636E72',
-    fontWeight: '600',
+    color: "#636E72",
+    fontWeight: "600",
   },
   activeSortOptionText: {
-    color: '#fff',
+    color: "#fff",
   },
   modalFooter: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    borderTopColor: "#E5E5EA",
     gap: 12,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#636E72',
+    fontWeight: "600",
+    color: "#636E72",
   },
   applyButton: {
     flex: 2,
-    backgroundColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   applyButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
 });
