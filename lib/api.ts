@@ -253,13 +253,19 @@ export const productsAPI = {
     const queryString = params ? new URLSearchParams(params).toString() : "";
     return apiRequest(`${API_ENDPOINTS.PRODUCTS_MY_LISTINGS}?${queryString}`);
   },
+    getListingsByUser: (userId: string) => apiRequest(`/api/products?userId=${userId}`),
 };
 
 export const userAPI = {
   getProfile: () => apiRequest("/api/users/profile"),
+    getUserProfile: (id: string) => apiRequest(`/api/users/${id}`),
   updateProfile: (data: any) =>
     apiRequest(API_ENDPOINTS.USERS.UPDATE_PROFILE, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+};
+
+export const reviewsAPI = {
+  getReviewsByUser: (userId: string) => apiRequest(`/api/reviews?userId=${userId}`),
 };

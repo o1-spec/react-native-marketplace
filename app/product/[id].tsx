@@ -33,8 +33,8 @@ export default function ProductDetailScreen() {
     try {
       setProductError(null);
       setIsLoading(true);
-      const productData = await productsAPI.getProductById(id as string);
-      setProduct(productData);
+      const response = await productsAPI.getProductById(id as string);
+      setProduct(response.product);
     } catch (error: any) {
       console.error("Fetch product error:", error);
       setProductError("Failed to load product. Please try again.");
@@ -230,17 +230,16 @@ export default function ProductDetailScreen() {
           </View>
         </SlideInView>
 
-        {/* Seller Info */}
         <SlideInView direction="up" delay={250}>
           <TouchableOpacity
             style={styles.sellerContainer}
-            onPress={() => router.push(`/user/${product.seller?.id}`)}
+            onPress={() => router.push(`/user/${product?.sellerId?._id}`)}
           >
             <View style={styles.sellerLeft}>
               <Image
                 source={{
                   uri:
-                    product.seller?.avatar ||
+                    product?.sellerId?.avatar ||
                     "https://i.pravatar.cc/300?img=47",
                 }}
                 style={styles.sellerAvatar}
@@ -248,10 +247,9 @@ export default function ProductDetailScreen() {
               <View style={styles.sellerInfo}>
                 <View style={styles.sellerNameRow}>
                   <Text style={styles.sellerName}>
-                    {product.sellerId?.name}
-                  </Text>{" "}
-                  // ✅ USE sellerId
-                  {product.sellerId?.emailVerified && (
+                    {product?.sellerId?.name}
+                  </Text>
+                  {product?.sellerId?.emailVerified && (
                     <Ionicons
                       name="checkmark-circle"
                       size={16}
@@ -262,13 +260,12 @@ export default function ProductDetailScreen() {
                 <View style={styles.sellerMeta}>
                   <Ionicons name="star" size={14} color="#FFB84D" />
                   <Text style={styles.ratingText}>
-                    {product.sellerId?.rating || 0} (
-                    {product.sellerId?.totalReviews || 0}) // ✅ USE sellerId
+                    {product?.sellerId?.rating || 0} (
+                    {product?.sellerId?.totalReviews || 0}) 
                   </Text>
                 </View>
                 <Text style={styles.responseTime}>
-                  Responds in {product.sellerId?.responseTime || "~1 hour"} //
-                  ✅ USE sellerId
+                  Responds in {product?.sellerId?.responseTime || "~1 hour"} 
                 </Text>
               </View>
             </View>
