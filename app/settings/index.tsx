@@ -1,5 +1,6 @@
 import { authAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -54,18 +55,36 @@ export default function SettingsScreen() {
     }));
   };
 
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => {
-          router.replace("/(auth)/login");
-        },
+const handleLogout = async () => {
+  Alert.alert("Logout", "Are you sure you want to logout?", [
+    { text: "Cancel", style: "cancel" },
+    {
+      text: "Logout",
+      style: "destructive",
+      onPress: async () => {
+        try {
+          await authAPI.logout();
+          Toast.show({
+            type: "success",
+            text1: "Logged out successfully",
+          });
+        } catch (error: any) {
+          Toast.show({
+            type: "error",
+            text1: "Failed to logout",
+            text2: error.message || "Please try again later",
+          });
+          console.error('Logout API error:', error);
+        }
+
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('user');
+
+        router.replace("/(auth)/login");
       },
-    ]);
-  };
+    },
+  ]);
+};
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
