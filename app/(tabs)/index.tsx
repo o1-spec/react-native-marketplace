@@ -1,7 +1,12 @@
 import { FadeInView } from "@/components/AnimatedViews";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
-import { notificationsAPI, productsAPI, userAPI } from "@/lib/api";
+import {
+  favoritesAPI,
+  notificationsAPI,
+  productsAPI,
+  userAPI,
+} from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -92,20 +97,42 @@ export default function HomeScreen() {
     fetchUserData();
     fetchFeaturedProducts();
     fetchNotificationCount();
+    fetchFavorites();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchFeaturedProducts(), fetchNotificationCount()]);
+    await Promise.all([
+      fetchFeaturedProducts(),
+      fetchNotificationCount(),
+      fetchFavorites(),
+    ]);
     setRefreshing(false);
   };
+  
+  const fetchFavorites = async () => {
+    try {
+      const response = await favoritesAPI.getFavorites();
+      const favoriteIds = response.favorites.map((fav: any) => fav.id);
+      setFavorites(favoriteIds);
+    } catch (error) {
+      console.error("Fetch favorites error:", error);
+    }
+  };
 
-  const toggleFavorite = (productId: string) => {
-    setFavorites((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
+  const toggleFavorite = async (productId: string) => {
+    try {
+      const isCurrentlyFavorite = favorites.includes(productId);
+      if (isCurrentlyFavorite) {
+        await favoritesAPI.removeFavorite(productId);
+        setFavorites((prev) => prev.filter((id) => id !== productId));
+      } else {
+        await favoritesAPI.addFavorite(productId);
+        setFavorites((prev) => [...prev, productId]);
+      }
+    } catch (error) {
+      console.error("Toggle favorite error:", error);
+    }
   };
 
   const handleCategoryPress = (category: any) => {

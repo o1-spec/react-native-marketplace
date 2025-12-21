@@ -276,3 +276,14 @@ export const reviewsAPI = {
   getReviewsByUser: (userId: string) =>
     apiRequest(`/api/reviews?userId=${userId}`),
 };
+
+export const favoritesAPI = {
+  getFavorites: () => apiRequest('/api/favorites'),
+  addFavorite: (productId: string) => apiRequest('/api/favorites', {
+    method: 'POST',
+    body: JSON.stringify({ productId }),
+  }),
+  removeFavorite: (productId: string) => apiRequest(`/api/favorites?productId=${productId}`, {
+    method: 'DELETE',
+  }),
+};

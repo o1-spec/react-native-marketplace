@@ -1,7 +1,7 @@
 import AnimatedButton from "@/components/AnimatedButton";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
-import { productsAPI } from "@/lib/api"; // ✅ ADD IMPORT
+import { favoritesAPI, productsAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -124,7 +124,7 @@ export default function SearchResultsScreen() {
         case "search":
         case "advanced":
           if (searchQuery) apiParams.search = searchQuery;
-          
+
           // Handle advanced filters
           if (params.priceRange) {
             const [min, max] = (params.priceRange as string).split("-");
@@ -143,15 +143,15 @@ export default function SearchResultsScreen() {
       const response = await productsAPI.getProducts(apiParams);
 
       if (append) {
-        setProducts(prev => [...prev, ...response.products]);
+        setProducts((prev) => [...prev, ...response.products]);
       } else {
         setProducts(response.products);
       }
 
       setHasMore(response.products.length === 20);
     } catch (error: any) {
-      console.error('Fetch products error:', error);
-      setProductsError('Failed to load products. Please try again.');
+      console.error("Fetch products error:", error);
+      setProductsError("Failed to load products. Please try again.");
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -161,6 +161,7 @@ export default function SearchResultsScreen() {
   useEffect(() => {
     setPage(1);
     fetchProducts(1, false);
+    fetchFavorites();
   }, [filterType, filterValue, sortBy, searchQuery]);
 
   const handleLoadMore = () => {
@@ -176,7 +177,6 @@ export default function SearchResultsScreen() {
     // fetchProducts will be called via useEffect
   };
 
-  // Get page title based on filter type
   const getPageTitle = () => {
     switch (filterType) {
       case "trending":
@@ -202,11 +202,30 @@ export default function SearchResultsScreen() {
     }
   };
 
-  const handleFavoriteToggle = (id: string) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]
-    );
+  const fetchFavorites = async () => {
+    try {
+      const response = await favoritesAPI.getFavorites();
+      const favoriteIds = response.favorites.map((fav: any) => fav.id);
+      setFavorites(favoriteIds);
+    } catch (error) {
+      console.error("Fetch favorites error:", error);
+    }
   };
+  
+ const handleFavoriteToggle = async (id: string) => {
+  try {
+    const isCurrentlyFavorite = favorites.includes(id);
+    if (isCurrentlyFavorite) {
+      await favoritesAPI.removeFavorite(id);
+      setFavorites(prev => prev.filter(favId => favId !== id));
+    } else {
+      await favoritesAPI.addFavorite(id);
+      setFavorites(prev => [...prev, id]);
+    }
+  } catch (error) {
+    console.error('Toggle favorite error:', error);
+  }
+};
 
   const renderSearchBar = () => (
     <View style={styles.searchContainer}>
@@ -349,7 +368,7 @@ export default function SearchResultsScreen() {
         <View style={styles.errorContainer}>
           <Ionicons name="cloud-offline-outline" size={48} color="#B2BEC3" />
           <Text style={styles.errorText}>{productsError}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
             onPress={() => fetchProducts(1, false)}
           >
@@ -365,7 +384,7 @@ export default function SearchResultsScreen() {
                 id={item.id}
                 title={item.title}
                 price={item.price}
-                image={item.images?.[0] || ''}
+                image={item.images?.[0] || ""}
                 location={`${item.location?.city}, ${item.location?.state}`}
                 condition={item.condition}
                 isFavorite={favorites.includes(item.id)}
@@ -540,27 +559,27 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 40,
   },
   errorText: {
     fontSize: 16,
-    color: '#636E72',
-    textAlign: 'center',
+    color: "#636E72",
+    textAlign: "center",
     marginTop: 12,
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   retryText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   footerLoader: {
     paddingHorizontal: 16,
