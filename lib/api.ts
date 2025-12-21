@@ -294,3 +294,10 @@ export const favoritesAPI = {
       method: "DELETE",
     }),
 };
+
+export const contactAPI = {
+  submitContact: (subject: string, message: string) => apiRequest('/api/contact', {
+    method: 'POST',
+    body: JSON.stringify({ subject, message }),
+  }),
+};

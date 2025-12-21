@@ -1,6 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { contactAPI } from "@/lib/api";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -11,54 +12,73 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function ContactUsScreen() {
   const router = useRouter();
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSendMessage = async () => {
     if (!subject.trim() || !message.trim()) {
-      Alert.alert('Error', 'Please fill in both subject and message');
+      Toast.show({
+        type: "error",
+        text1: "Please fill in both subject and message",
+      });
       return;
     }
 
     if (subject.trim().length < 5) {
-      Alert.alert('Error', 'Subject must be at least 5 characters');
+      Toast.show({
+        type: "error",
+        text1: "Subject must be at least 5 characters",
+      });
       return;
     }
 
     if (message.trim().length < 10) {
-      Alert.alert('Error', 'Message must be at least 10 characters');
+      Toast.show({
+        type: "error",
+        text1: "Message must be at least 10 characters",
+      });
       return;
     }
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      setSubject('');
-      setMessage('');
-      Alert.alert(
-        'Message Sent',
-        'Thank you for contacting us! We\'ll get back to you within 24 hours.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
+    try {
+      const response = await contactAPI.submitContact(
+        subject.trim(),
+        message.trim()
       );
-    }, 2000);
+
+      setSubject("");
+      setMessage("");
+
+      Alert.alert("Message Sent", response.message, [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ]);
+    } catch (error: any) {
+      console.error("Contact form error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Failed to send message",
+        text2: error.message || "Please try again later",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -86,17 +106,23 @@ export default function ContactUsScreen() {
 
           <View style={styles.contactMethods}>
             <View style={styles.contactMethod}>
-              <View style={[styles.contactIcon, { backgroundColor: '#E5F9F8' }]}>
+              <View
+                style={[styles.contactIcon, { backgroundColor: "#E5F9F8" }]}
+              >
                 <Ionicons name="mail-outline" size={20} color="#4ECDC4" />
               </View>
               <View>
                 <Text style={styles.contactMethodTitle}>Email</Text>
-                <Text style={styles.contactMethodValue}>support@marketplace.com</Text>
+                <Text style={styles.contactMethodValue}>
+                  support@marketplace.com
+                </Text>
               </View>
             </View>
 
             <View style={styles.contactMethod}>
-              <View style={[styles.contactIcon, { backgroundColor: '#F3E5F5' }]}>
+              <View
+                style={[styles.contactIcon, { backgroundColor: "#F3E5F5" }]}
+              >
                 <Ionicons name="call-outline" size={20} color="#A29BFE" />
               </View>
               <View>
@@ -106,7 +132,9 @@ export default function ContactUsScreen() {
             </View>
 
             <View style={styles.contactMethod}>
-              <View style={[styles.contactIcon, { backgroundColor: '#FFF4E6' }]}>
+              <View
+                style={[styles.contactIcon, { backgroundColor: "#FFF4E6" }]}
+              >
                 <Ionicons name="time-outline" size={20} color="#FFB84D" />
               </View>
               <View>
@@ -158,10 +186,15 @@ export default function ContactUsScreen() {
             disabled={isLoading}
           >
             <Text style={styles.sendButtonText}>
-              {isLoading ? 'Sending...' : 'Send Message'}
+              {isLoading ? "Sending..." : "Send Message"}
             </Text>
             {!isLoading && (
-              <Ionicons name="send" size={18} color="#fff" style={styles.sendIcon} />
+              <Ionicons
+                name="send"
+                size={18}
+                color="#fff"
+                style={styles.sendIcon}
+              />
             )}
           </TouchableOpacity>
         </View>
@@ -173,48 +206,48 @@ export default function ContactUsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
   },
   content: {
     flex: 1,
   },
   contactInfo: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 20,
     paddingVertical: 24,
     marginBottom: 16,
   },
   contactTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
     marginBottom: 8,
   },
   contactText: {
     fontSize: 15,
-    color: '#636E72',
+    color: "#636E72",
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -222,36 +255,36 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   contactMethod: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
   },
   contactIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   contactMethodTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
   },
   contactMethodValue: {
     fontSize: 14,
-    color: '#636E72',
+    color: "#636E72",
   },
   form: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 20,
     paddingVertical: 24,
     marginBottom: 16,
   },
   formTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
     marginBottom: 20,
   },
   inputGroup: {
@@ -259,52 +292,52 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
     marginBottom: 8,
   },
   inputContainer: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
   },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#2D3436',
+    color: "#2D3436",
   },
   messageContainer: {
     minHeight: 120,
   },
   messageInput: {
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   charCount: {
     fontSize: 12,
-    color: '#B2BEC3',
-    textAlign: 'right',
+    color: "#B2BEC3",
+    textAlign: "right",
     marginTop: 4,
   },
   sendButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
     borderRadius: 12,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     marginTop: 10,
   },
   disabledButton: {
-    backgroundColor: '#B2BEC3',
+    backgroundColor: "#B2BEC3",
   },
   sendButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   sendIcon: {
     marginLeft: 4,
