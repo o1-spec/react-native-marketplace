@@ -155,6 +155,11 @@ export const authAPI = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiRequest("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
   completeProfile: async (data: {
     phoneNumber?: string;
     location?: string;
@@ -278,12 +283,14 @@ export const reviewsAPI = {
 };
 
 export const favoritesAPI = {
-  getFavorites: () => apiRequest('/api/favorites'),
-  addFavorite: (productId: string) => apiRequest('/api/favorites', {
-    method: 'POST',
-    body: JSON.stringify({ productId }),
-  }),
-  removeFavorite: (productId: string) => apiRequest(`/api/favorites?productId=${productId}`, {
-    method: 'DELETE',
-  }),
+  getFavorites: () => apiRequest("/api/favorites"),
+  addFavorite: (productId: string) =>
+    apiRequest("/api/favorites", {
+      method: "POST",
+      body: JSON.stringify({ productId }),
+    }),
+  removeFavorite: (productId: string) =>
+    apiRequest(`/api/favorites?productId=${productId}`, {
+      method: "DELETE",
+    }),
 };

@@ -231,14 +231,14 @@ export default function RegisterScreen() {
             By signing up, you agree to our{" "}
             <Text
               style={styles.link}
-              onPress={() => router.push("/(auth)/terms")}
+              onPress={() => router.push("/(legal)/terms")}
             >
               Terms
             </Text>{" "}
             and{" "}
             <Text
               style={styles.link}
-              onPress={() => router.push("/(auth)/privacy")}
+              onPress={() => router.push("/(legal)/privacy")}
             >
               Privacy Policy
             </Text>
