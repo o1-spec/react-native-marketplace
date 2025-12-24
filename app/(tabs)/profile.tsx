@@ -1,5 +1,5 @@
 import AnimatedButton from "@/components/AnimatedButton";
-import { productsAPI, userAPI } from "@/lib/api";
+import { productsAPI, reviewsAPI, userAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -19,7 +20,13 @@ import Toast from "react-native-toast-message";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"listings" | "sold">("listings");
+  const [activeTab, setActiveTab] = useState<"listings" | "sold" | "reviews">(
+    "listings"
+  );
+
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [updatingAvatar, setUpdatingAvatar] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
@@ -28,6 +35,27 @@ export default function ProfileScreen() {
   const [userError, setUserError] = useState<string | null>(null);
   const [listingsError, setListingsError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchUserReviews = async () => {
+    if (!user?.id) return;
+
+    try {
+      setReviewsError(null);
+      setReviewsLoading(true);
+      const response = await reviewsAPI.getReviews(user.id);
+      setReviews(response.reviews);
+    } catch (error: any) {
+      console.error("Fetch user reviews error:", error);
+      setReviewsError("Failed to load reviews");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to load reviews",
+      });
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -70,6 +98,7 @@ export default function ProfileScreen() {
       if (!isRefreshing) {
         fetchUserProfile();
         fetchUserListings();
+        fetchUserReviews();
       }
     }, [isRefreshing])
   );
@@ -214,6 +243,8 @@ export default function ProfileScreen() {
   if (userLoading) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4ECDC4" />{" "}
+        {/* ✅ ADD SPINNER */}
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
@@ -246,246 +277,375 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <TouchableOpacity
-              onPress={handleAvatarChange}
-              disabled={updatingAvatar}
-            >
-              <Image
-                source={{ uri: user.avatar || "" }}
-                style={[
-                  styles.avatar,
-                  !user.avatar && styles.avatarPlaceholder,
-                ]}
-              />
-              {!user.avatar && (
-                <View style={styles.avatarPlaceholderContent}>
-                  <Ionicons name="person" size={40} color="#B2BEC3" />
-                </View>
-              )}
-              <View style={styles.editAvatarButton}>
-                <Ionicons name="camera" size={16} color="#fff" />
-              </View>
-            </TouchableOpacity>
-            {user.verified && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={24} color="#4ECDC4" />
-              </View>
-            )}
-            {updatingAvatar && (
-              <View style={styles.avatarLoading}>
-                <Ionicons name="refresh" size={24} color="#4ECDC4" />
-              </View>
-            )}
+        {!user ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4ECDC4" />{" "}
+            {/* ✅ ADD SPINNER */}
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
-
-          {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.rating || 0}</Text>
-              <View style={styles.statLabelRow}>
-                <Ionicons name="star" size={14} color="#FFB84D" />
-                <Text style={styles.statLabel}>Rating</Text>
-              </View>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.totalReviews || 0}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.totalSales || 0}</Text>
-              <Text style={styles.statLabel}>Sales</Text>
-            </View>
-          </View>
-
-          <AnimatedButton
-            title="Edit Profile"
-            icon="create-outline"
-            variant="secondary"
-            onPress={() => router.push("/profile/edit")}
-          />
-        </View>
-
-        {/* Quick Info */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="location-outline" size={20} color="#4ECDC4" />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{user.location || "Not set"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="call-outline" size={20} color="#4ECDC4" />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>
-                {user.phoneNumber || "Not set"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="calendar-outline" size={20} color="#4ECDC4" />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Member Since</Text>
-              <Text style={styles.infoValue}>
-                {user.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "Unknown"}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.listingsSection}>
-          <Text style={styles.sectionTitle}>My Listings</Text>
-
-          {/* Tabs */}
-          <View style={styles.tabs}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "listings" && styles.activeTab]}
-              onPress={() => setActiveTab("listings")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "listings" && styles.activeTabText,
-                ]}
-              >
-                Active ({activeListings.length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "sold" && styles.activeTab]}
-              onPress={() => setActiveTab("sold")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "sold" && styles.activeTabText,
-                ]}
-              >
-                Sold ({soldListings.length})
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Listings Grid */}
-          {listingsLoading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading listings...</Text>
-            </View>
-          ) : listingsError ? (
-            <View style={styles.errorContainer}>
-              <Ionicons
-                name="cloud-offline-outline"
-                size={48}
-                color="#B2BEC3"
-              />
-              <Text style={styles.errorText}>{listingsError}</Text>
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={fetchUserListings}
-              >
-                <Text style={styles.retryText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.listingsGrid}>
-              {activeTab === "listings"
-                ? activeListings.map(renderListingCard)
-                : soldListings.map(renderListingCard)}
-            </View>
-          )}
-
-          {/* Empty State */}
-          {!listingsLoading &&
-            !listingsError &&
-            ((activeTab === "listings" && activeListings.length === 0) ||
-              (activeTab === "sold" && soldListings.length === 0)) && (
-              <View style={styles.emptyState}>
-                <Ionicons name="cube-outline" size={64} color="#B2BEC3" />
-                <Text style={styles.emptyText}>
-                  {activeTab === "listings"
-                    ? "No active listings yet"
-                    : "No sold items yet"}
-                </Text>
-                {activeTab === "listings" && (
-                  <AnimatedButton
-                    title="Create Listing"
-                    icon="add-circle"
-                    onPress={() => router.push("/(tabs)/create")}
-                    size="large"
+        ) : (
+          <>
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                <TouchableOpacity
+                  onPress={handleAvatarChange}
+                  disabled={updatingAvatar}
+                >
+                  <Image
+                    source={{ uri: user.avatar || "" }}
+                    style={[
+                      styles.avatar,
+                      !user.avatar && styles.avatarPlaceholder,
+                    ]}
                   />
+                  {!user.avatar && (
+                    <View style={styles.avatarPlaceholderContent}>
+                      <Ionicons name="person" size={40} color="#B2BEC3" />
+                    </View>
+                  )}
+                  <View style={styles.editAvatarButton}>
+                    <Ionicons name="camera" size={16} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+                {user.verified && (
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={24}
+                      color="#4ECDC4"
+                    />
+                  </View>
+                )}
+                {updatingAvatar && (
+                  <View style={styles.avatarLoading}>
+                    <Ionicons name="refresh" size={24} color="#4ECDC4" />
+                  </View>
                 )}
               </View>
-            )}
-        </View>
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
 
-        {/* Actions Section */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push("/favorites")}
-          >
-            <View style={styles.actionLeft}>
-              <Ionicons name="heart-outline" size={24} color="#FF6B6B" />
-              <Text style={styles.actionText}>Favorites</Text>
+              {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
+
+              {/* Stats */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{user.rating || 0}</Text>
+                  <View style={styles.statLabelRow}>
+                    <Ionicons name="star" size={14} color="#FFB84D" />
+                    <Text style={styles.statLabel}>Rating</Text>
+                  </View>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{user.totalReviews || 0}</Text>
+                  <Text style={styles.statLabel}>Reviews</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{user.totalSales || 0}</Text>
+                  <Text style={styles.statLabel}>Sales</Text>
+                </View>
+              </View>
+
+              <AnimatedButton
+                title="Edit Profile"
+                icon="create-outline"
+                variant="secondary"
+                onPress={() => router.push("/profile/edit")}
+              />
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push("/settings")}
-          >
-            <View style={styles.actionLeft}>
-              <Ionicons name="settings-outline" size={24} color="#636E72" />
-              <Text style={styles.actionText}>Settings</Text>
+            {/* Quick Info */}
+            <View style={styles.infoSection}>
+              <View style={styles.infoItem}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="location-outline" size={20} color="#4ECDC4" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Location</Text>
+                  <Text style={styles.infoValue}>
+                    {user.location || "Not set"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.infoItem}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="call-outline" size={20} color="#4ECDC4" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Phone</Text>
+                  <Text style={styles.infoValue}>
+                    {user.phoneNumber || "Not set"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.infoItem}>
+                <View style={styles.infoIcon}>
+                  <Ionicons name="calendar-outline" size={20} color="#4ECDC4" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Member Since</Text>
+                  <Text style={styles.infoValue}>
+                    {user.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "Unknown"}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push("/help")}
-          >
-            <View style={styles.actionLeft}>
-              <Ionicons name="help-circle-outline" size={24} color="#636E72" />
-              <Text style={styles.actionText}>Help & Support</Text>
+            <View style={styles.listingsSection}>
+              <Text style={styles.sectionTitle}>My Listings</Text>
+
+              {/* Tabs */}
+              <View style={styles.tabs}>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === "listings" && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab("listings")}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === "listings" && styles.activeTabText,
+                    ]}
+                  >
+                    Active ({activeListings.length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === "sold" && styles.activeTab]}
+                  onPress={() => setActiveTab("sold")}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === "sold" && styles.activeTabText,
+                    ]}
+                  >
+                    Sold ({soldListings.length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === "reviews" && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab("reviews")}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === "reviews" && styles.activeTabText,
+                    ]}
+                  >
+                    Reviews ({reviews.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Listings Grid */}
+              {activeTab === "reviews" ? (
+                reviewsLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#4ECDC4" />
+                    <Text style={styles.loadingText}>Loading reviews...</Text>
+                  </View>
+                ) : reviewsError ? (
+                  <View style={styles.errorContainer}>
+                    <Ionicons
+                      name="cloud-offline-outline"
+                      size={48}
+                      color="#B2BEC3"
+                    />
+                    <Text style={styles.errorText}>{reviewsError}</Text>
+                    <TouchableOpacity
+                      style={styles.retryButton}
+                      onPress={fetchUserReviews}
+                    >
+                      <Text style={styles.retryText}>Retry</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : reviews.length > 0 ? (
+                  <View style={styles.reviewsList}>
+                    {reviews.map((review) => (
+                      <View key={review.id} style={styles.reviewCard}>
+                        <View style={styles.reviewHeader}>
+                          <Image
+                            source={{
+                              uri:
+                                review.reviewer.avatar ||
+                                "https://i.pravatar.cc/300?img=47",
+                            }}
+                            style={styles.reviewerAvatar}
+                          />
+                          <View style={styles.reviewInfo}>
+                            <Text style={styles.reviewerName}>
+                              {review.reviewer.name}
+                            </Text>
+                            <View style={styles.ratingContainer}>
+                              {[...Array(5)].map((_, i) => (
+                                <Ionicons
+                                  key={i}
+                                  name={
+                                    i < review.rating ? "star" : "star-outline"
+                                  }
+                                  size={14}
+                                  color="#FFD700"
+                                />
+                              ))}
+                            </View>
+                          </View>
+                          <Text style={styles.reviewDate}>
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </Text>
+                        </View>
+                        <Text style={styles.reviewComment}>
+                          {review.comment}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.productLink}
+                          onPress={() =>
+                            router.push(`/product/${review.product.id}`)
+                          }
+                        >
+                          <Text style={styles.productLinkText}>
+                            About: {review.product.title}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={64}
+                      color="#B2BEC3"
+                    />
+                    <Text style={styles.emptyText}>No reviews yet</Text>
+                    <Text style={styles.emptySubtext}>
+                      Reviews from buyers will appear here
+                    </Text>
+                  </View>
+                )
+              ) : listingsLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#4ECDC4" />{" "}
+                  <Text style={styles.loadingText}>Loading listings...</Text>
+                </View>
+              ) : listingsError ? (
+                <View style={styles.errorContainer}>
+                  <Ionicons
+                    name="cloud-offline-outline"
+                    size={48}
+                    color="#B2BEC3"
+                  />
+                  <Text style={styles.errorText}>{listingsError}</Text>
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={fetchUserListings}
+                  >
+                    <Text style={styles.retryText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.listingsGrid}>
+                  {activeTab === "listings"
+                    ? activeListings.map(renderListingCard)
+                    : soldListings.map(renderListingCard)}
+                </View>
+              )}
+
+              {!listingsLoading &&
+                !listingsError &&
+                activeTab !== "reviews" &&
+                ((activeTab === "listings" && activeListings.length === 0) ||
+                  (activeTab === "sold" && soldListings.length === 0)) && (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="cube-outline" size={64} color="#B2BEC3" />
+                    <Text style={styles.emptyText}>
+                      {activeTab === "listings"
+                        ? "No active listings yet"
+                        : "No sold items yet"}
+                    </Text>
+                    {activeTab === "listings" && (
+                      <AnimatedButton
+                        title="Create Listing"
+                        icon="add-circle"
+                        onPress={() => router.push("/(tabs)/create")}
+                        size="large"
+                      />
+                    )}
+                  </View>
+                )}
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionItem} onPress={handleLogout}>
-            <View style={styles.actionLeft}>
-              <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
-              <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
+            {/* Actions Section */}
+            <View style={styles.actionsSection}>
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => router.push("/favorites")}
+              >
+                <View style={styles.actionLeft}>
+                  <Ionicons name="heart-outline" size={24} color="#FF6B6B" />
+                  <Text style={styles.actionText}>Favorites</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => router.push("/settings")}
+              >
+                <View style={styles.actionLeft}>
+                  <Ionicons name="settings-outline" size={24} color="#636E72" />
+                  <Text style={styles.actionText}>Settings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => router.push("/help")}
+              >
+                <View style={styles.actionLeft}>
+                  <Ionicons
+                    name="help-circle-outline"
+                    size={24}
+                    color="#636E72"
+                  />
+                  <Text style={styles.actionText}>Help & Support</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={handleLogout}
+              >
+                <View style={styles.actionLeft}>
+                  <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
+                  <Text style={[styles.actionText, styles.logoutText]}>
+                    Logout
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+              </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-          </TouchableOpacity>
-        </View>
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
+            {/* Bottom Spacing */}
+            <View style={styles.bottomSpacing} />
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -844,5 +1004,62 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 50,
+  },
+  reviewsList: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  reviewCard: {
+    backgroundColor: "#F8F9FA",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  reviewerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  reviewInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2D3436",
+    marginBottom: 4,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: "#B2BEC3",
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: "#636E72",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  productLink: {
+    alignSelf: "flex-start",
+  },
+  productLinkText: {
+    fontSize: 13,
+    color: "#4ECDC4",
+    fontWeight: "600",
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#B2BEC3",
+    textAlign: "center",
+    marginTop: 8,
   },
 });

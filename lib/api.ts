@@ -278,8 +278,15 @@ export const userAPI = {
 };
 
 export const reviewsAPI = {
-  getReviewsByUser: (userId: string) =>
-    apiRequest(`/api/reviews?userId=${userId}`),
+  getReviews: (userId: string) => apiRequest(`/api/reviews?userId=${userId}`),
+  createReview: (reviewData: { productId: string; rating: number; comment: string; orderId?: string }) => 
+    apiRequest('/api/reviews', {
+      method: 'POST',
+      body: JSON.stringify(reviewData),
+    }),
+  deleteReview: (reviewId: string) => apiRequest(`/api/reviews?reviewId=${reviewId}`, {
+    method: 'DELETE',
+  }),
 };
 
 export const favoritesAPI = {

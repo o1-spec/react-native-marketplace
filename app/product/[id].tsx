@@ -1,7 +1,7 @@
 import AnimatedButton from "@/components/AnimatedButton";
 import { FadeInView, SlideInView } from "@/components/AnimatedViews";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
-import { productsAPI } from "@/lib/api";
+import { productsAPI, reviewsAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -14,9 +14,11 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 const { width } = Dimensions.get("window");
 
@@ -29,7 +31,23 @@ export default function ProductDetailScreen() {
   const [product, setProduct] = useState<any>(null);
   const [productError, setProductError] = useState<string | null>(null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
+  const fetchReviews = async () => {
+    try {
+      const sellerId = product?.sellerId?._id;
+      if (sellerId) {
+        const response = await reviewsAPI.getReviews(sellerId);
+        setReviews(response.reviews);
+      }
+    } catch (error) {
+      console.error("Fetch reviews error:", error);
+    }
+  };
   const fetchProduct = async () => {
     try {
       setProductError(null);
@@ -101,6 +119,42 @@ export default function ProductDetailScreen() {
     }
   }, [product?.category]);
 
+  useEffect(() => {
+    if (product?.sellerId) {
+      fetchReviews();
+    }
+  }, [product?.sellerId]);
+
+  const handleSubmitReview = async () => {
+    if (!reviewComment.trim()) {
+      Alert.alert("Error", "Please write a review comment");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      await reviewsAPI.createReview({
+        productId: id as string,
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      });
+
+      setShowReviewForm(false);
+      setReviewComment("");
+      setReviewRating(5);
+      fetchReviews();
+      Toast.show({
+        type: "success",
+        text1: "Review submitted!",
+        text2: "Thank you for your feedback",
+      });
+    } catch (error: any) {
+      console.error("Submit review error:", error);
+      Alert.alert("Error", error.message || "Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
   const handleShare = async () => {
     try {
       await Share.share({
@@ -302,39 +356,186 @@ export default function ProductDetailScreen() {
 
         {/* Similar Products Placeholder */}
         <SlideInView direction="up" delay={450}>
-  <View style={styles.similarSection}>
-    <Text style={styles.sectionTitle}>Similar Products</Text>
-    {similarProducts.length > 0 ? (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.similarProductsContainer}
-      >
-        {similarProducts.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.similarProductCard}
-            onPress={() => router.push(`/product/${item.id}`)}
-          >
-            <Image
-              source={{ uri: item.images[0] || 'https://i.pravatar.cc/300?img=47' }}
-              style={styles.similarProductImage}
-            />
-            <View style={styles.similarProductInfo}>
-              <Text style={styles.similarProductTitle} numberOfLines={2}>
-                {item.title}
+          <View style={styles.similarSection}>
+            <Text style={styles.sectionTitle}>Similar Products</Text>
+            {similarProducts.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.similarProductsContainer}
+              >
+                {similarProducts.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.similarProductCard}
+                    onPress={() => router.push(`/product/${item.id}`)}
+                  >
+                    <Image
+                      source={{
+                        uri:
+                          item.images[0] || "https://i.pravatar.cc/300?img=47",
+                      }}
+                      style={styles.similarProductImage}
+                    />
+                    <View style={styles.similarProductInfo}>
+                      <Text
+                        style={styles.similarProductTitle}
+                        numberOfLines={2}
+                      >
+                        {item.title}
+                      </Text>
+                      <Text style={styles.similarProductPrice}>
+                        ₦{item.price.toLocaleString()}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.placeholderText}>
+                No similar products found
               </Text>
-              <Text style={styles.similarProductPrice}>₦{item.price.toLocaleString()}</Text>
+            )}
+          </View>
+        </SlideInView>
+        <SlideInView direction="up" delay={500}>
+          <View style={styles.reviewsSection}>
+            <View style={styles.reviewsHeader}>
+              <Text style={styles.sectionTitle}>
+                Reviews ({reviews.length})
+              </Text>
+              <TouchableOpacity
+                style={styles.addReviewButton}
+                onPress={() => setShowReviewForm(true)}
+              >
+                <Ionicons name="add-circle" size={20} color="#2D3436" />
+                <Text style={styles.addReviewText}>Add Review</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    ) : (
-      <Text style={styles.placeholderText}>No similar products found</Text>
-    )}
-  </View>
-</SlideInView>
 
+            {/* Average Rating */}
+            {reviews.length > 0 && (
+              <View style={styles.averageRating}>
+                <Text style={styles.averageRatingText}>
+                  ⭐{" "}
+                  {product.averageRating ||
+                    (
+                      reviews.reduce((sum, r) => sum + r.rating, 0) /
+                      reviews.length
+                    ).toFixed(1)}
+                  ({reviews.length} reviews)
+                </Text>
+              </View>
+            )}
+            {reviews.length > 0 ? (
+              reviews.slice(0, 3).map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Image
+                      source={{
+                        uri:
+                          review.reviewer.avatar ||
+                          "https://i.pravatar.cc/300?img=47",
+                      }}
+                      style={styles.reviewerAvatar}
+                    />
+                    <View style={styles.reviewInfo}>
+                      <Text style={styles.reviewerName}>
+                        {review.reviewer.name}
+                      </Text>
+                      <View style={styles.ratingContainer}>
+                        {[...Array(5)].map((_, i) => (
+                          <Ionicons
+                            key={i}
+                            name={i < review.rating ? "star" : "star-outline"}
+                            size={14}
+                            color="#FFD700"
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noReviewsText}>
+                No reviews yet. Be the first to review!
+              </Text>
+            )}
+          </View>
+        </SlideInView>
+        {showReviewForm && (
+          <View style={styles.reviewModalOverlay}>
+            <View style={styles.reviewModal}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Write a Review</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowReviewForm(false)}
+                >
+                  <Ionicons name="close" size={24} color="#2D3436" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.ratingInput}>
+                <Text style={styles.ratingLabel}>Rating:</Text>
+                <View style={styles.starsContainer}>
+                  {[...Array(5)].map((_, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => setReviewRating(i + 1)}
+                      disabled={submittingReview}
+                    >
+                      <Ionicons
+                        name={i < reviewRating ? "star" : "star-outline"}
+                        size={30}
+                        color="#FFD700"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Write your review..."
+                value={reviewComment}
+                onChangeText={setReviewComment}
+                multiline
+                numberOfLines={4}
+                editable={!submittingReview}
+              />
+
+              <View style={styles.formButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.cancelButton,
+                    submittingReview && styles.disabledButton,
+                  ]}
+                  onPress={() => setShowReviewForm(false)}
+                  disabled={submittingReview}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    submittingReview && styles.disabledButton,
+                  ]}
+                  onPress={handleSubmitReview}
+                  disabled={submittingReview}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {submittingReview ? "Submitting..." : "Submit Review"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -594,7 +795,6 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
   },
-  // ✅ ADD ERROR STYLES
   errorContainer: {
     flex: 1,
     justifyContent: "center",
@@ -621,38 +821,205 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   similarProductsContainer: {
-  paddingHorizontal: 20,
-  gap: 12,
-},
-similarProductCard: {
-  width: 140,
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  overflow: 'hidden',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
-},
-similarProductImage: {
-  width: '100%',
-  height: 100,
-  backgroundColor: '#F5F5F5',
-},
-similarProductInfo: {
-  padding: 12,
-},
-similarProductTitle: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#2D3436',
-  marginBottom: 6,
-  lineHeight: 18,
-},
-similarProductPrice: {
-  fontSize: 16,
-  fontWeight: '700',
-  color: '#2D3436',
-},
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  similarProductCard: {
+    width: 140,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  similarProductImage: {
+    width: "100%",
+    height: 100,
+    backgroundColor: "#F5F5F5",
+  },
+  similarProductInfo: {
+    padding: 12,
+  },
+  similarProductTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2D3436",
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  similarProductPrice: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2D3436",
+  },
+  // ✅ ADD REVIEW STYLES
+  reviewsSection: {
+    backgroundColor: "#fff",
+    marginTop: 8,
+    padding: 20,
+  },
+  reviewsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  addReviewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#4ECDC4",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addReviewText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  averageRating: {
+    marginBottom: 16,
+  },
+  averageRatingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2D3436",
+  },
+  reviewCard: {
+    backgroundColor: "#F8F9FA",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  reviewerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  reviewInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2D3436",
+    marginBottom: 4,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: "#636E72",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: "#B2BEC3",
+  },
+  noReviewsText: {
+    fontSize: 14,
+    color: "#B2BEC3",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  reviewModalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  reviewModal: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: "90%",
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2D3436",
+  },
+  closeButton: {
+    padding: 4,
+  },
+  ratingInput: {
+    marginBottom: 16,
+  },
+  ratingLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2D3436",
+    marginBottom: 8,
+  },
+  starsContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  commentInput: {
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: "#2D3436",
+    minHeight: 100,
+    textAlignVertical: "top",
+    marginBottom: 20,
+  },
+  formButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#636E72",
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: "#4ECDC4",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
 });
