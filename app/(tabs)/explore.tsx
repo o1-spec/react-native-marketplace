@@ -65,17 +65,35 @@ const categories = [
 ];
 
 const priceRanges = [
-  { id: "1", label: "Under $25", min: 0, max: 25, icon: "cash-outline" },
-  { id: "2", label: "$25 - $50", min: 25, max: 50, icon: "wallet-outline" },
-  { id: "3", label: "$50 - $100", min: 50, max: 100, icon: "card-outline" },
+  { id: "1", label: "Under ₦25,000", min: 0, max: 25000, icon: "cash-outline" },
+  {
+    id: "2",
+    label: "₦25,000 - ₦50,000",
+    min: 25000,
+    max: 50000,
+    icon: "wallet-outline",
+  },
+  {
+    id: "3",
+    label: "₦50,000 - ₦100,000",
+    min: 50000,
+    max: 100000,
+    icon: "card-outline",
+  },
   {
     id: "4",
-    label: "$100 - $500",
-    min: 100,
-    max: 500,
+    label: "₦100,000 - ₦500,000",
+    min: 100000,
+    max: 500000,
     icon: "pricetag-outline",
   },
-  { id: "5", label: "Over $500", min: 500, max: null, icon: "diamond-outline" },
+  {
+    id: "5",
+    label: "Over ₦500,000",
+    min: 500000,
+    max: null,
+    icon: "diamond-outline",
+  },
 ];
 
 const conditions = [
@@ -196,6 +214,16 @@ export default function ExploreScreen() {
       params: {
         type: "all-categories",
         value: "all",
+      },
+    });
+  };
+
+  const handlePopularSearch = (searchTerm: string) => {
+    router.push({
+      pathname: "/search",
+      params: {
+        query: searchTerm,
+        type: "search",
       },
     });
   };
@@ -476,7 +504,7 @@ export default function ExploreScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.searchChip}
-                onPress={() => setSearchQuery(search)}
+                onPress={() => handlePopularSearch(search)} 
               >
                 <Ionicons name="search" size={16} color="#636E72" />
                 <Text style={styles.searchChipText}>{search}</Text>
@@ -524,7 +552,7 @@ export default function ExploreScreen() {
                 <View style={styles.priceInputContainer}>
                   <Text style={styles.priceInputLabel}>Min Price</Text>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
+                    <Text style={styles.currencySymbol}>₦</Text>{" "}
                     <TextInput
                       style={styles.priceInput}
                       placeholder="0"
@@ -537,7 +565,7 @@ export default function ExploreScreen() {
                 <View style={styles.priceInputContainer}>
                   <Text style={styles.priceInputLabel}>Max Price</Text>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.currencySymbol}>$</Text>
+                    <Text style={styles.currencySymbol}>₦</Text>{" "}
                     <TextInput
                       style={styles.priceInput}
                       placeholder="No limit"
