@@ -45,7 +45,6 @@ export default function ProfileScreen() {
       const response = await reviewsAPI.getReviews(user.id);
       setReviews(response.reviews);
     } catch (error: any) {
-      console.error("Fetch user reviews error:", error);
       setReviewsError("Failed to load reviews");
       Toast.show({
         type: "error",
@@ -63,7 +62,6 @@ export default function ProfileScreen() {
       const userData = await userAPI.getProfile();
       setUser(userData.user);
     } catch (error: any) {
-      console.error("Fetch user profile error:", error);
       setUserError("Failed to load profile");
       Toast.show({
         type: "error",
@@ -81,7 +79,6 @@ export default function ProfileScreen() {
       const response = await productsAPI.getMyListings();
       setListings(response.products || []);
     } catch (error: any) {
-      console.error("Fetch user listings error:", error);
       setListingsError("Failed to load listings");
       Toast.show({
         type: "error",
@@ -171,7 +168,6 @@ export default function ProfileScreen() {
         });
       }
     } catch (error: any) {
-      console.error("Avatar update error:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -193,7 +189,6 @@ export default function ProfileScreen() {
             await AsyncStorage.removeItem("authToken");
             router.replace("/(auth)/login");
           } catch (error) {
-            console.error("Logout error:", error);
             Toast.show({
               type: "error",
               text1: "Error",
@@ -239,12 +234,10 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
-  // ✅ ADD LOADING AND ERROR STATES
   if (userLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4ECDC4" />{" "}
-        {/* ✅ ADD SPINNER */}
+        <ActivityIndicator size="large" color="#4ECDC4" />
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
@@ -279,8 +272,7 @@ export default function ProfileScreen() {
         {/* Profile Section */}
         {!user ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4ECDC4" />{" "}
-            {/* ✅ ADD SPINNER */}
+            <ActivityIndicator size="large" color="#4ECDC4" />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         ) : (
@@ -539,7 +531,7 @@ export default function ProfileScreen() {
                 )
               ) : listingsLoading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#4ECDC4" />{" "}
+                  <ActivityIndicator size="large" color="#4ECDC4" />
                   <Text style={styles.loadingText}>Loading listings...</Text>
                 </View>
               ) : listingsError ? (

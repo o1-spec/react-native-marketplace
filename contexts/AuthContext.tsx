@@ -69,7 +69,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       return { success: true };
     } catch (error: any) {
-      console.error("Login error:", error);
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
@@ -91,21 +90,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const checkAuthState = async () => {
-    if (hasCheckedAuth.current) return;
+    if (hasCheckedAuth.current) {
+      return;
+    }
     hasCheckedAuth.current = true;
 
     try {
       const storedToken = await AsyncStorage.getItem("token");
-
       if (storedToken) {
         const profileData = await userAPI.getProfile();
         const currentUser = profileData.user;
 
+        if (!currentUser || !currentUser._id) {
+          await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("user");
+          setIsLoading(false);
+          return;
+        }
+
         setToken(storedToken);
         setUser(currentUser);
+      } else {
       }
     } catch (error) {
-      console.error("Error checking auth state:", error);
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("user");
     } finally {
