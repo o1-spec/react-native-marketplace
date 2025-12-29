@@ -142,7 +142,7 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!token) return;
 
-    const newSocket = io("http://localhost:3000", {
+    const newSocket = io("https://marketplace-backend-blush.vercel.app", {
       auth: { token: token },
     });
 

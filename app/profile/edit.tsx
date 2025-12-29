@@ -74,7 +74,7 @@ export default function EditProfileScreen() {
   const token = await AsyncStorage.getItem('token');
 
   const response = await fetch(
-    "http://localhost:3000/api/upload?folder=profiles",
+    "https://marketplace-backend-blush.vercel.app/api/upload?folder=profiles",
     {
       method: "POST",
       headers: {

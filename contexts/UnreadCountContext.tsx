@@ -44,7 +44,7 @@ export const UnreadCountProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     if (!token || !user) return;
 
-    const socket = io('http://localhost:3000', {
+    const socket = io('https://marketplace-backend-blush.vercel.app', {
       auth: { token }
     });
 

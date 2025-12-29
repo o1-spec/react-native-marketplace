@@ -43,7 +43,7 @@ export default function CompleteProfileScreen() {
 
     try {
       const response = await fetch(
-        "http://localhost:3000/api/upload?folder=profiles",
+        "https://marketplace-backend-blush.vercel.app/api/upload?folder=profiles", // ✅ Updated URL
         {
           method: "POST",
           body: formData,
@@ -212,7 +212,10 @@ export default function CompleteProfileScreen() {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: err instanceof Error ? err.message : "Failed to complete profile. Please try again.",
+        text2:
+          err instanceof Error
+            ? err.message
+            : "Failed to complete profile. Please try again.",
       });
     } finally {
       setIsSubmitting(false);

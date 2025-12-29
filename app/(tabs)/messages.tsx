@@ -84,7 +84,7 @@ export default function MessagesScreen() {
   useEffect(() => {
     if (!token || !user) return;
 
-    const newSocket = io("http://localhost:3000", {
+    const newSocket = io("https://marketplace-backend-blush.vercel.app", {
       auth: { token },
     });
 

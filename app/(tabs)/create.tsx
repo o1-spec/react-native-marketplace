@@ -66,7 +66,7 @@ export default function CreateListingScreen() {
     const token = await AsyncStorage.getItem("token");
 
     const response = await fetch(
-      "http://localhost:3000/api/upload?folder=listings",
+      "https://marketplace-backend-blush.vercel.app/api/upload?folder=listings",
       {
         method: "POST",
         headers: {
