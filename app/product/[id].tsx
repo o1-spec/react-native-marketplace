@@ -3,15 +3,23 @@ import AnimatedButton from "@/components/AnimatedButton";
 import { FadeInView, SlideInView } from "@/components/AnimatedViews";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { productsAPI, reviewsAPI } from "@/lib/api";
+import {
+  conversationsAPI,
+  messagesAPI,
+  productsAPI,
+  reviewsAPI,
+} from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Clipboard,
   Dimensions,
   Image,
+  Linking,
+  Modal,
   ScrollView,
   Share,
   StyleSheet,
@@ -41,6 +49,9 @@ export default function ProductDetailScreen() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [firstMessage, setFirstMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const fetchSellerReviews = async () => {
     try {
@@ -51,6 +62,47 @@ export default function ProductDetailScreen() {
       }
     } catch (error) {
       console.error("Fetch seller reviews error:", error);
+    }
+  };
+
+  const handleCall = async () => {
+    const phoneNumber = product?.seller?.phoneNumber;
+
+    if (!phoneNumber) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Seller phone number not available",
+      });
+      return;
+    }
+
+    const formattedNumber = phoneNumber.startsWith("+")
+      ? phoneNumber
+      : `+234${phoneNumber}`;
+
+    const phoneUrl = `tel:${formattedNumber}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(phoneUrl);
+
+      if (canOpen) {
+        await Linking.openURL(phoneUrl);
+      } else {
+        Toast.show({
+          type: "info",
+          text1: "Phone Call",
+          text2: `Call ${formattedNumber}`,
+        });
+        Clipboard.setString(formattedNumber);
+      }
+    } catch (error) {
+      console.error("Call error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Unable to make phone call. Please try on a real device.",
+      });
     }
   };
 
@@ -70,7 +122,6 @@ export default function ProductDetailScreen() {
       const response = await productsAPI.getProductById(id as string);
       setProduct(response.product);
     } catch (error: any) {
-      console.error("Fetch product error:", error);
       setProductError("Failed to load product. Please try again.");
       Toast.show({
         type: "error",
@@ -215,7 +266,55 @@ export default function ProductDetailScreen() {
   };
 
   const handleMessage = () => {
-    router.push(`/chat/${product?.seller?.id}`);
+    if (!currentUser) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Please log in to message the seller",
+      });
+      return;
+    }
+
+    setShowMessageModal(true);
+  };
+
+  const handleSendFirstMessage = async () => {
+    if (!firstMessage.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Please enter a message",
+      });
+      return;
+    }
+
+    try {
+      setSendingMessage(true);
+
+      const response = await conversationsAPI.createConversation({
+        productId: product?.id,
+        sellerId: product?.seller?.id,
+      });
+
+      // Send first message
+      await messagesAPI.sendMessage({
+        conversationId: response.conversation.id,
+        content: firstMessage.trim(),
+      });
+
+      setShowMessageModal(false);
+      setFirstMessage("");
+      router.push(`/chat/${response.conversation.id}` as any);
+    } catch (error: any) {
+      console.error("Send first message error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to send message",
+      });
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const handleDeleteReview = async (
@@ -720,10 +819,58 @@ export default function ProductDetailScreen() {
           </View>
         </View>
       )}
+      {/* Message Modal */}
+      <Modal
+        visible={showMessageModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowMessageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.messageModal}>
+            <Text style={styles.modalTitle}>Message Seller</Text>
+            <Text style={styles.modalSubtitle}>
+              Start a conversation about "{product?.title}"
+            </Text>
 
+            <TextInput
+              style={styles.messageInput}
+              placeholder="Type your message..."
+              value={firstMessage}
+              onChangeText={setFirstMessage}
+              multiline={true}
+              maxLength={500}
+              editable={!sendingMessage}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowMessageModal(false);
+                  setFirstMessage("");
+                }}
+                disabled={sendingMessage}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.sendButton}
+                onPress={handleSendFirstMessage}
+                disabled={sendingMessage || !firstMessage.trim()}
+              >
+                <Text style={styles.sendButtonText}>
+                  {sendingMessage ? "Sending..." : "Send Message"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {/* Bottom Actions */}
       <View style={styles.bottomActions}>
-        <TouchableOpacity style={styles.callButton}>
+        <TouchableOpacity style={styles.callButton} onPress={handleCall}>
           <Ionicons name="call-outline" size={24} color="#2D3436" />
         </TouchableOpacity>
         <View style={styles.messageButtonWrapper}>
@@ -1209,5 +1356,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#636E72",
     fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  messageModal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 20,
+    margin: 20,
+    width: "90%",
+    maxWidth: 400,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#636E72",
+    marginBottom: 20,
+  },
+  messageInput: {
+    borderWidth: 1,
+    borderColor: "#DDE1E5",
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: "top",
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sendButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#0984E3",
+    marginLeft: 8,
+  },
+  sendButtonText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
 });

@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -16,8 +17,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import io, { Socket } from "socket.io-client";
 import Toast from "react-native-toast-message";
+import io, { Socket } from "socket.io-client";
 
 interface Message {
   id: string;
@@ -80,7 +81,8 @@ export default function ChatScreen() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const flatListRef = useRef<FlatList>(null);
-
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   useEffect(() => {
     const loadConversationData = async () => {
       if (!token || !id) {
@@ -113,9 +115,9 @@ export default function ChatScreen() {
       } catch (error: any) {
         console.error("❌ Failed to load conversation:", error);
         Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: error.message || 'Failed to load conversation',
+          type: "error",
+          text1: "Error",
+          text2: error.message || "Failed to load conversation",
         });
       }
     };
@@ -183,9 +185,9 @@ export default function ChatScreen() {
     newSocket.on("connect_error", (error: ErrorEvent) => {
       console.error("Socket connection error:", error);
       Toast.show({
-        type: 'error',
-        text1: 'Connection Error',
-        text2: 'Failed to connect to chat server',
+        type: "error",
+        text1: "Connection Error",
+        text2: "Failed to connect to chat server",
       });
     });
 
@@ -193,6 +195,33 @@ export default function ChatScreen() {
       newSocket.disconnect();
     };
   }, [id, token, user?._id]);
+
+  const handlePayment = async (method: string) => {
+    setProcessingPayment(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      Toast.show({
+        type: "success",
+        text1: "Payment Successful!",
+        text2: `Paid ₦${productInfo?.price?.toLocaleString()} via ${method}`,
+      });
+
+      setShowPaymentModal(false);
+
+      // Optionally navigate back or update order status
+      // router.back();
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Payment Failed",
+        text2: "Please try again",
+      });
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!inputText.trim() || !socket || !user) return;
@@ -226,9 +255,9 @@ export default function ChatScreen() {
     } catch (error) {
       console.error("Failed to send message:", error);
       Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to send message',
+        type: "error",
+        text1: "Error",
+        text2: "Failed to send message",
       });
     } finally {
       setIsSending(false);
@@ -289,114 +318,178 @@ export default function ChatScreen() {
     );
   };
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={0}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#2D3436" />
-        </TouchableOpacity>
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#2D3436" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.userInfo}
-          onPress={() => router.push(`/user/${userInfo?.id}`)}
-        >
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: userInfo?.avatar || "https://i.pravatar.cc/150" }}
-              style={styles.avatar}
-            />
-            {userInfo?.isOnline && <View style={styles.onlineBadge} />}
-          </View>
-          <View>
-            <Text style={styles.userName}>
-              {userInfo?.name || "Loading..."}
-            </Text>
-            <Text style={styles.status}>
-              {userInfo?.isOnline ? "Online" : "Offline"}
-            </Text>
-          </View>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.userInfo}
+            onPress={() => router.push(`/user/${userInfo?.id}`)}
+          >
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{
+                  uri: userInfo?.avatar || "https://i.pravatar.cc/150",
+                }}
+                style={styles.avatar}
+              />
+              {userInfo?.isOnline && <View style={styles.onlineBadge} />}
+            </View>
+            <View>
+              <Text style={styles.userName}>
+                {userInfo?.name || "Loading..."}
+              </Text>
+              <Text style={styles.status}>
+                {userInfo?.isOnline ? "Online" : "Offline"}
+              </Text>
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.headerButton}>
-          <Ionicons name="call-outline" size={24} color="#2D3436" />
-        </TouchableOpacity>
-      </View>
-
-      {productInfo && productInfo.id && (
-        <TouchableOpacity
-          style={styles.productCard}
-          onPress={() => {
-            if (productInfo.id) {
-              router.push(`/product/${productInfo.id}`);
-            }
-          }}
-        >
-          <Image
-            source={{ uri: productInfo.image }}
-            style={styles.productImage}
-          />
-          <View style={styles.productInfo}>
-            <Text style={styles.productTitle} numberOfLines={1}>
-              {productInfo.title}
-            </Text>
-            <Text style={styles.productPrice}>
-              ₦{productInfo.price?.toLocaleString()}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
-        </TouchableOpacity>
-      )}
-
-      {/* Messages */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messagesContainer}
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: true })
-        }
-      />
-
-      {/* Input */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.attachButton}>
-          <Ionicons name="add-circle-outline" size={28} color="#636E72" />
-        </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor="#B2BEC3"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-        />
-        <View style={styles.sendButtonWrapper}>
-          <AnimatedButton
-            icon="send"
-            onPress={handleSend}
-            loading={isSending}
-            disabled={!inputText.trim() || isSending}
-            size="small"
-            style={styles.sendButton}
-            title=""
-          />
+          <TouchableOpacity style={styles.headerButton}>
+            <Ionicons name="call-outline" size={24} color="#2D3436" />
+          </TouchableOpacity>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+
+        {productInfo && productInfo.id && (
+          <View style={styles.productCard}>
+            <TouchableOpacity
+              style={styles.productLink}
+              onPress={() => router.push(`/product/${productInfo.id}`)}
+            >
+              <Image
+                source={{ uri: productInfo.image }}
+                style={styles.productImage}
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productTitle} numberOfLines={1}>
+                  {productInfo.title}
+                </Text>
+                <Text style={styles.productPrice}>
+                  ₦{productInfo.price?.toLocaleString()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.payButton}
+              onPress={() => setShowPaymentModal(true)}
+            >
+              <Text style={styles.payButtonText}>Pay Now</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Messages */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messagesContainer}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
+          }
+        />
+
+        {/* Input */}
+        <View style={styles.inputContainer}>
+          <TouchableOpacity style={styles.attachButton}>
+            <Ionicons name="add-circle-outline" size={28} color="#636E72" />
+          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            placeholderTextColor="#B2BEC3"
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+          <View style={styles.sendButtonWrapper}>
+            <AnimatedButton
+              icon="send"
+              onPress={handleSend}
+              loading={isSending}
+              disabled={!inputText.trim() || isSending}
+              size="small"
+              style={styles.sendButton}
+              title=""
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+      {/* Payment Modal */}
+      <Modal
+        visible={showPaymentModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModal}>
+            <Text style={styles.modalTitle}>Complete Payment</Text>
+            <Text style={styles.modalSubtitle}>
+              Pay ₦{productInfo?.price?.toLocaleString()} for "
+              {productInfo?.title}"
+            </Text>
+
+            {/* Dummy Payment Options */}
+            <TouchableOpacity
+              style={styles.paymentOption}
+              onPress={() => handlePayment("card")}
+              disabled={processingPayment}
+            >
+              <Ionicons name="card-outline" size={24} color="#4ECDC4" />
+              <Text style={styles.paymentOptionText}>Credit/Debit Card</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.paymentOption}
+              onPress={() => handlePayment("bank")}
+              disabled={processingPayment}
+            >
+              <Ionicons name="business-outline" size={24} color="#4ECDC4" />
+              <Text style={styles.paymentOptionText}>Bank Transfer</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.paymentOption}
+              onPress={() => handlePayment("wallet")}
+              disabled={processingPayment}
+            >
+              <Ionicons name="wallet-outline" size={24} color="#4ECDC4" />
+              <Text style={styles.paymentOptionText}>Digital Wallet</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B2BEC3" />
+            </TouchableOpacity>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowPaymentModal(false)}
+                disabled={processingPayment}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
-
-// Styles remain the same...
 
 const styles = StyleSheet.create({
   container: {
@@ -585,5 +678,75 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  payButton: {
+    backgroundColor: "#4ECDC4",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  payButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  paymentModal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 20,
+    margin: 20,
+    width: "90%",
+    maxWidth: 400,
+  },
+  paymentOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 12,
+  },
+  paymentOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#2D3436",
+  },
+  productLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2D3436",
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#636E72",
+    marginBottom: 20,
+  },
+  modalButtons: {
+    marginTop: 20,
+  },
+  cancelButton: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#F1F2F6",
+  },
+  cancelButtonText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#636E72",
   },
 });

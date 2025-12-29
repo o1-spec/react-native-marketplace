@@ -361,3 +361,11 @@ export const conversationsAPI = {
       method: 'POST',
     }),
 };
+
+export const messagesAPI = {
+  sendMessage: (data: { conversationId: string; content: string }) =>
+    apiRequest(`/api/conversations/${data.conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content: data.content }),
+    }),
+};
