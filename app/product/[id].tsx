@@ -563,15 +563,6 @@ export default function ProductDetailScreen() {
 
             {productReviews.length > 0 ? (
               productReviews.slice(0, 2).map((review) => {
-                console.log("Review ID:", review.id);
-                console.log("Review Reviewer ID:", review.reviewer.id);
-                console.log("Current User ID:", currentUser?._id);
-                console.log(
-                  "IDs Match:",
-                  review.reviewer.id === currentUser?._id
-                );
-                console.log("---");
-
                 return (
                   <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>

@@ -12,18 +12,17 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native"; // ✅ ADD ActivityIndicator
+} from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth(); // ✅ ADD AUTH HOOK
+  const { isAuthenticated, isLoading } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
-  console.log("🔍 Auth state:", { isLoading, isAuthenticated });
 
   useEffect(() => {
     Animated.parallel([
@@ -61,9 +60,7 @@ export default function WelcomeScreen() {
     ).start();
   }, []);
 
-  // ✅ SHOW LOADING WHILE CHECKING AUTH
   if (isLoading) {
-    console.log("⏳ Showing loading screen");
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4ECDC4" />
