@@ -284,10 +284,16 @@ export const userAPI = {
     }),
 };
 
+// lib/api.ts
 export const reviewsAPI = {
-  getReviews: (userId: string) => apiRequest(`/api/reviews?userId=${userId}`),
+  getReviews: (sellerId: string) => apiRequest(`/api/reviews?sellerId=${sellerId}`),
+  
+  getReviewsByUser: (userId: string) => apiRequest(`/api/reviews?userId=${userId}`),
+  
+  getProductReviews: (productId: string) => apiRequest(`/api/reviews?productId=${productId}`),
+  
   createReview: (reviewData: {
-    productId: string;
+    sellerId: string; 
     rating: number;
     comment: string;
     orderId?: string;
@@ -296,8 +302,20 @@ export const reviewsAPI = {
       method: "POST",
       body: JSON.stringify(reviewData),
     }),
+  
+  createProductReview: (reviewData: {
+    productId: string;
+    rating: number;
+    comment: string;
+    orderId?: string;
+  }) =>
+    apiRequest("/api/product-reviews", {
+      method: "POST",
+      body: JSON.stringify(reviewData),
+    }),
+  
   deleteReview: (reviewId: string) =>
-    apiRequest(`/api/reviews?reviewId=${reviewId}`, {
+    apiRequest(`/api/reviews/${reviewId}`, {
       method: "DELETE",
     }),
 };

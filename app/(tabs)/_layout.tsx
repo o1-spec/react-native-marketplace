@@ -1,4 +1,3 @@
-// app/(tabs)/_layout.tsx
 import AnimatedTabIcon from '@/components/AnimatedTabIcon';
 import { BadgePulse } from '@/components/BadgeBounce';
 import { useUnreadCount } from '@/contexts/UnreadCountContext';
