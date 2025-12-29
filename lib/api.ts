@@ -41,6 +41,13 @@ export const API_ENDPOINTS = {
     CATEGORIES: "/api/products/categories",
   },
   PRODUCTS_MY_LISTINGS: "/api/products/my-listings",
+  CONVERSATIONS: {
+    LIST: "/api/conversations",
+    DETAIL: (id: string) => `/api/conversations/${id}`,
+    MESSAGES: (id: string) => `/api/conversations/${id}/messages`,
+    CREATE: "/api/conversations",
+    MARK_READ: (id: string) => `/api/conversations/${id}/read`,
+  },
 } as const;
 
 export const buildUrl = (endpoint: string): string => {
@@ -279,14 +286,20 @@ export const userAPI = {
 
 export const reviewsAPI = {
   getReviews: (userId: string) => apiRequest(`/api/reviews?userId=${userId}`),
-  createReview: (reviewData: { productId: string; rating: number; comment: string; orderId?: string }) => 
-    apiRequest('/api/reviews', {
-      method: 'POST',
+  createReview: (reviewData: {
+    productId: string;
+    rating: number;
+    comment: string;
+    orderId?: string;
+  }) =>
+    apiRequest("/api/reviews", {
+      method: "POST",
       body: JSON.stringify(reviewData),
     }),
-  deleteReview: (reviewId: string) => apiRequest(`/api/reviews?reviewId=${reviewId}`, {
-    method: 'DELETE',
-  }),
+  deleteReview: (reviewId: string) =>
+    apiRequest(`/api/reviews?reviewId=${reviewId}`, {
+      method: "DELETE",
+    }),
 };
 
 export const favoritesAPI = {
@@ -303,8 +316,30 @@ export const favoritesAPI = {
 };
 
 export const contactAPI = {
-  submitContact: (subject: string, message: string) => apiRequest('/api/contact', {
-    method: 'POST',
-    body: JSON.stringify({ subject, message }),
-  }),
+  submitContact: (subject: string, message: string) =>
+    apiRequest("/api/contact", {
+      method: "POST",
+      body: JSON.stringify({ subject, message }),
+    }),
+};
+
+export const conversationsAPI = {
+  getConversations: () => apiRequest(API_ENDPOINTS.CONVERSATIONS.LIST),
+  
+  getConversation: (id: string) => 
+    apiRequest(API_ENDPOINTS.CONVERSATIONS.DETAIL(id)),
+  
+  getMessages: (id: string) => 
+    apiRequest(API_ENDPOINTS.CONVERSATIONS.MESSAGES(id)),
+  
+  createConversation: (data: { productId: string; sellerId: string }) =>
+    apiRequest(API_ENDPOINTS.CONVERSATIONS.CREATE, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  markAsRead: (conversationId: string) =>
+    apiRequest(API_ENDPOINTS.CONVERSATIONS.MARK_READ(conversationId), {
+      method: 'POST',
+    }),
 };

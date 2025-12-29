@@ -1,11 +1,12 @@
-import { ScreenTransitions } from '@/constants/transitions';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { toastConfig } from '@/lib/toastConfig';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Toast from 'react-native-toast-message';
+import { ScreenTransitions } from "@/constants/transitions";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { UnreadCountProvider } from "@/contexts/UnreadCountContext";
+import { toastConfig } from "@/lib/toastConfig";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
 
 function AppContent() {
   const { isLoading } = useAuth();
@@ -26,38 +27,38 @@ function AppContent() {
           headerShown: false,
           ...ScreenTransitions.slideAndFade,
           gestureEnabled: true,
-          gestureDirection: 'horizontal',
+          gestureDirection: "horizontal",
         }}
       >
-        <Stack.Screen 
-          name="index" 
-          options={{ 
+        <Stack.Screen
+          name="index"
+          options={{
             headerShown: false,
             ...ScreenTransitions.fade,
-          }} 
+          }}
         />
-        <Stack.Screen 
+        <Stack.Screen
           name="(auth)"
           options={{
             headerShown: false,
             ...ScreenTransitions.slideFromRight,
           }}
         />
-        <Stack.Screen 
+        <Stack.Screen
           name="(onboarding)"
           options={{
             headerShown: false,
             ...ScreenTransitions.fade,
           }}
         />
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{ 
+        <Stack.Screen
+          name="(tabs)"
+          options={{
             headerShown: false,
             ...ScreenTransitions.fade,
-          }} 
+          }}
         />
-        
+
         {/* <Stack.Screen 
           name="modal" 
           options={{ 
@@ -67,7 +68,7 @@ function AppContent() {
             ...ScreenTransitions.bottomSheet,
           }} 
         /> */}
-        
+
         {/* Add missing screens with transitions */}
         {/* <Stack.Screen 
           name="chat/[id]" 
@@ -90,40 +91,40 @@ function AppContent() {
             ...ScreenTransitions.slideAndFade,
           }} 
         /> */}
-        <Stack.Screen 
-          name="search" 
-          options={{ 
+        <Stack.Screen
+          name="search"
+          options={{
             headerShown: false,
             ...ScreenTransitions.slideAndFade,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="favorites" 
-          options={{ 
+        <Stack.Screen
+          name="favorites"
+          options={{
             headerShown: false,
             ...ScreenTransitions.slideFromRight,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="notifications" 
-          options={{ 
+        <Stack.Screen
+          name="notifications"
+          options={{
             headerShown: false,
             ...ScreenTransitions.slideFromRight,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="help" 
-          options={{ 
+        <Stack.Screen
+          name="help"
+          options={{
             headerShown: false,
             ...ScreenTransitions.slideFromRight,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="settings" 
-          options={{ 
+        <Stack.Screen
+          name="settings"
+          options={{
             headerShown: false,
             ...ScreenTransitions.slideFromRight,
-          }} 
+          }}
         />
         <Stack.Screen
           name="contact-us"
@@ -140,8 +141,10 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <AppContent />
-      <Toast config={toastConfig} /> 
+      <UnreadCountProvider>
+        <AppContent />
+        <Toast config={toastConfig} />
+      </UnreadCountProvider>
     </AuthProvider>
   );
 }
@@ -149,8 +152,8 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
   },
 });

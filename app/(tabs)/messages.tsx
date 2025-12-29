@@ -1,104 +1,145 @@
-import AnimatedButton from '@/components/AnimatedButton';
-import LongPressMenu from '@/components/LongPressMenu';
-import MessageCardSkeleton from '@/components/MessageCardSkeleton';
-import SwipeToDelete from '@/components/SwipeToDelete';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
+import { conversationsAPI } from "@/lib/api";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  Alert,
   FlatList,
   Image,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+import Toast from "react-native-toast-message";
+import io, { Socket } from "socket.io-client";
 
-// Mock data - replace with API call later
-const mockConversations = [
-  {
-    id: '1',
-    userId: 'user1',
-    userName: 'John Doe',
-    userAvatar: 'https://i.pravatar.cc/150?img=12',
-    productId: 'prod1',
-    productTitle: 'iPhone 13 Pro Max 256GB',
-    productImage: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=100',
-    lastMessage: "Is this still available? I'm interested!",
-    lastMessageTime: '2m ago',
-    unreadCount: 2,
-    isOnline: true,
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    userName: 'Sarah Smith',
-    userAvatar: 'https://i.pravatar.cc/150?img=45',
-    productId: 'prod2',
-    productTitle: 'MacBook Pro 14" M1 Pro',
-    productImage: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=100',
-    lastMessage: 'Can you do $1800?',
-    lastMessageTime: '1h ago',
-    unreadCount: 0,
-    isOnline: false,
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    userName: 'Mike Johnson',
-    userAvatar: 'https://i.pravatar.cc/150?img=33',
-    productId: 'prod3',
-    productTitle: 'Sony WH-1000XM4 Headphones',
-    productImage: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=100',
-    lastMessage: "Thanks! I'll pick it up tomorrow.",
-    lastMessageTime: '3h ago',
-    unreadCount: 0,
-    isOnline: true,
-  },
-  {
-    id: '4',
-    userId: 'user4',
-    userName: 'Emily Davis',
-    userAvatar: 'https://i.pravatar.cc/150?img=47',
-    productId: 'prod4',
-    productTitle: 'iPad Air 5th Gen 64GB',
-    productImage: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=100',
-    lastMessage: 'Where can we meet?',
-    lastMessageTime: '1d ago',
-    unreadCount: 1,
-    isOnline: false,
-  },
-  {
-    id: '5',
-    userId: 'user5',
-    userName: 'David Wilson',
-    userAvatar: 'https://i.pravatar.cc/150?img=15',
-    productId: 'prod5',
-    productTitle: 'Canon EOS R6 Camera Body',
-    productImage: 'https://images.unsplash.com/photo-1606980623314-0a13d7e6c5b3?w=100',
-    lastMessage: 'Does it come with warranty?',
-    lastMessageTime: '2d ago',
-    unreadCount: 0,
-    isOnline: false,
-  },
-];
+interface Conversation {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  productId: string;
+  productTitle: string;
+  productImage: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  isOnline: boolean;
+}
+
+interface MessageEvent {
+  id: string;
+  text: string;
+  senderId: string;
+  timestamp: string;
+  isRead: boolean;
+  conversationId: string;
+}
+
+interface ReadReceiptEvent {
+  conversationId: string;
+  userId: string;
+}
+
+interface UserStatusEvent {
+  userId: string;
+  isOnline: boolean;
+}
 
 export default function MessagesScreen() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [conversations, setConversations] = useState(mockConversations);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, token } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  const loadConversations = async () => {
+    if (!token) return;
+
+    try {
+      const response = await conversationsAPI.getConversations();
+      setConversations(response.conversations || []);
+    } catch (error: any) {
+      console.error("Error loading conversations:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to load conversations',
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate loading conversations
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1800);
+    loadConversations();
+  }, [token]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const newSocket = io("http://localhost:3000", {
+      auth: { token },
+    });
+
+    setSocket(newSocket);
+
+    // Listen for new messages
+    newSocket.on("message", (message: MessageEvent) => {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === message.conversationId
+            ? {
+                ...conv,
+                lastMessage: message.text,
+                lastMessageTime: message.timestamp,
+                unreadCount:
+                  message.senderId !== user._id
+                    ? conv.unreadCount + 1
+                    : conv.unreadCount,
+              }
+            : conv
+        )
+      );
+    });
+
+    // Listen for read receipts
+    newSocket.on("messagesRead", (data: ReadReceiptEvent) => {
+      if (data.userId === user._id) {
+        // User read messages in another conversation
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === data.conversationId ? { ...conv, unreadCount: 0 } : conv
+          )
+        );
+      }
+    });
+
+    newSocket.on("userStatus", (data: UserStatusEvent) => {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.userId === data.userId
+            ? { ...conv, isOnline: data.isOnline }
+            : conv
+        )
+      );
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [token, user]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadConversations();
+  };
 
   const filteredConversations = conversations.filter(
     (conv) =>
@@ -106,118 +147,98 @@ export default function MessagesScreen() {
       conv.productTitle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDeleteConversation = (id: string) => {
-    setConversations(conversations.filter((conv) => conv.id !== id));
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "now";
+    if (minutes < 60) return `${minutes}m`;
+    if (hours < 24) return `${hours}h`;
+    if (days < 7) return `${days}d`;
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
   };
 
-  const handleArchiveConversation = (id: string) => {
-    Alert.alert('Archived', 'Conversation archived successfully');
-  };
-
-  const handleMuteConversation = (id: string) => {
-    Alert.alert('Muted', 'Conversation muted');
-  };
-
-  const renderConversation = ({ item }: any) => (
-    <SwipeToDelete onDelete={() => handleDeleteConversation(item.id)}>
-      <LongPressMenu
-        actions={[
-          {
-            icon: 'archive-outline',
-            label: 'Archive',
-            onPress: () => handleArchiveConversation(item.id),
-          },
-          {
-            icon: 'notifications-off-outline',
-            label: 'Mute',
-            onPress: () => handleMuteConversation(item.id),
-          },
-          {
-            icon: 'trash-outline',
-            label: 'Delete',
-            onPress: () => handleDeleteConversation(item.id),
-            color: '#FF6B6B',
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.conversationCard}
-          onPress={() => router.push(`/chat/${item.userId}`)}
-          activeOpacity={0.7}
-        >
-      {/* User Avatar */}
+  const renderConversation = ({ item }: { item: Conversation }) => (
+    <TouchableOpacity
+      style={styles.conversationItem}
+      onPress={() => router.push(`/chat/${item.id}`)}
+    >
       <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.userAvatar }} style={styles.avatar} />
+        <Image
+          source={{ uri: item.userAvatar || "https://i.pravatar.cc/150" }}
+          style={styles.avatar}
+        />
         {item.isOnline && <View style={styles.onlineBadge} />}
       </View>
 
-      {/* Conversation Info */}
-      <View style={styles.conversationInfo}>
+      <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
-          <Text style={styles.userName}>{item.userName}</Text>
-          <Text style={styles.time}>{item.lastMessageTime}</Text>
-        </View>
-
-        {/* Product Preview */}
-        <View style={styles.productPreview}>
-          <Image
-            source={{ uri: item.productImage }}
-            style={styles.productThumbnail}
-          />
-          <Text style={styles.productTitle} numberOfLines={1}>
-            {item.productTitle}
+          <Text style={styles.userName} numberOfLines={1}>
+            {item.userName}
+          </Text>
+          <Text style={styles.timestamp}>
+            {formatTime(item.lastMessageTime)}
           </Text>
         </View>
 
-        {/* Last Message */}
+        <Text style={styles.productTitle} numberOfLines={1}>
+          {item.productTitle}
+        </Text>
+
         <View style={styles.messageRow}>
-          <Text
-            style={[
-              styles.lastMessage,
-              item.unreadCount > 0 && styles.unreadMessage,
-            ]}
-            numberOfLines={1}
-          >
-            {item.lastMessage}
+          <Text style={styles.lastMessage} numberOfLines={1}>
+            {item.lastMessage || "No messages yet"}
           </Text>
           {item.unreadCount > 0 && (
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+              <Text style={styles.unreadCount}>
+                {item.unreadCount > 99 ? "99+" : item.unreadCount}
+              </Text>
             </View>
           )}
         </View>
       </View>
-        </TouchableOpacity>
-      </LongPressMenu>
-    </SwipeToDelete>
+
+      <TouchableOpacity style={styles.moreButton}>
+        <Ionicons name="ellipsis-vertical" size={20} color="#B2BEC3" />
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <View style={styles.emptyIconContainer}>
-        <Ionicons name="chatbubbles-outline" size={64} color="#B2BEC3" />
-      </View>
-      <Text style={styles.emptyTitle}>No Messages Yet</Text>
-      <Text style={styles.emptyText}>
-        Start a conversation by messaging sellers about their products
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="chatbubble-outline" size={64} color="#E5E5EA" />
+      <Text style={styles.emptyTitle}>No conversations yet</Text>
+      <Text style={styles.emptySubtitle}>
+        Start chatting with sellers about their products
       </Text>
-      <AnimatedButton
-        title="Browse Products"
-        icon="storefront"
-        onPress={() => router.push('/(tabs)')}
-        size="large"
-      />
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading conversations...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="options-outline" size={24} color="#2D3436" />
-        </TouchableOpacity>
+        {/* <TouchableOpacity style={styles.searchButton}>
+          <Ionicons name="search" size={24} color="#2D3436" />
+        </TouchableOpacity> */}
       </View>
 
       {/* Search Bar */}
@@ -232,32 +253,24 @@ export default function MessagesScreen() {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
               <Ionicons name="close-circle" size={20} color="#B2BEC3" />
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* Conversations List */}
-      {isLoading ? (
-        <View style={styles.skeletonContainer}>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <MessageCardSkeleton key={`skeleton-${index}`} />
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={filteredConversations}
-          renderItem={renderConversation}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={
-            filteredConversations.length === 0 && styles.emptyContainer
-          }
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <FlatList
+        data={filteredConversations}
+        renderItem={renderConversation}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
@@ -265,42 +278,40 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: "#FAFAFA",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: "#E5E5EA",
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2D3436',
+    fontWeight: "700",
+    color: "#2D3436",
   },
-  filterButton: {
+  searchButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     marginHorizontal: 20,
     marginVertical: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 14,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -310,145 +321,130 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#2D3436',
+    color: "#2D3436",
   },
-  conversationCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#636E72",
+  },
+  listContainer: {
+    paddingVertical: 8,
+  },
+  conversationItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginVertical: 4,
     padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 8,
-    borderRadius: 14,
-    shadowColor: '#000',
+    borderRadius: 12,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   avatarContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 12,
   },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F5F5F5',
   },
   onlineBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#4ECDC4',
-    borderWidth: 2,
-    borderColor: '#fff',
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#4ECDC4",
+    borderWidth: 3,
+    borderColor: "#fff",
   },
-  conversationInfo: {
+  conversationContent: {
     flex: 1,
   },
   conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
   },
   userName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3436',
+    fontWeight: "600",
+    color: "#2D3436",
+    flex: 1,
   },
-  time: {
+  timestamp: {
     fontSize: 12,
-    color: '#B2BEC3',
-  },
-  productPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 8,
-    gap: 8,
-  },
-  productThumbnail: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: '#E5E5EA',
+    color: "#B2BEC3",
+    marginLeft: 8,
   },
   productTitle: {
-    flex: 1,
-    fontSize: 13,
-    color: '#636E72',
-    fontWeight: '500',
+    fontSize: 14,
+    color: "#636E72",
+    marginBottom: 4,
   },
   messageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   lastMessage: {
-    flex: 1,
     fontSize: 14,
-    color: '#636E72',
-    lineHeight: 20,
-  },
-  unreadMessage: {
-    color: '#2D3436',
-    fontWeight: '600',
+    color: "#636E72",
+    flex: 1,
   },
   unreadBadge: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
+    borderRadius: 10,
     minWidth: 20,
     height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 6,
     marginLeft: 8,
   },
   unreadCount: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  moreButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    paddingBottom: 80,
-  },
-  emptyState: {
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
+    paddingTop: 100,
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2D3436',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#2D3436",
+    marginTop: 16,
+    marginBottom: 8,
   },
-  emptyText: {
-    fontSize: 15,
-    color: '#636E72',
-    textAlign: 'center',
+  emptySubtitle: {
+    fontSize: 16,
+    color: "#B2BEC3",
+    textAlign: "center",
     lineHeight: 22,
-    marginBottom: 32,
-  },
-  skeletonContainer: {
-    padding: 16,
-    gap: 12,
   },
 });
