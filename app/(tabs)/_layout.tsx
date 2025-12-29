@@ -1,10 +1,14 @@
+// app/(tabs)/_layout.tsx
 import AnimatedTabIcon from '@/components/AnimatedTabIcon';
 import { BadgePulse } from '@/components/BadgeBounce';
+import { useUnreadCount } from '@/contexts/UnreadCountContext';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function TabLayout() {
+  const { totalUnreadCount } = useUnreadCount(); 
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
@@ -87,12 +91,15 @@ export default function TabLayout() {
                   size={size}
                   focused={focused}
                 />
-                {/* Pulsing badge */}
-                <BadgePulse>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>3</Text>
-                  </View>
-                </BadgePulse>
+                {totalUnreadCount > 0 && (
+                  <BadgePulse>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                      </Text>
+                    </View>
+                  </BadgePulse>
+                )}
               </View>
             ),
           }}
