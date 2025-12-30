@@ -116,7 +116,7 @@ export default function ProfileScreen() {
     } as any);
 
     const response = await fetch(
-      "https://marketplace-backend-blush.vercel.app/api/upload?folder=profiles", // ✅ Updated URL
+      "https://marketplace-backend-blush.vercel.app/api/upload?folder=profiles", 
       {
         method: "POST",
         body: formData,
