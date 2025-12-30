@@ -207,13 +207,13 @@ export default function WelcomeScreen() {
           <Text style={styles.socialText}>Join 10,000+ happy users</Text>
         </View>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.clearButton}
           onPress={handleClearStorage}
           activeOpacity={0.7}
         >
           <Text style={styles.clearButtonText}>Clear Storage</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </Animated.View>
     </View>
   );

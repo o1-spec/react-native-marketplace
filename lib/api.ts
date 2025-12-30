@@ -1,9 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_CONFIG = {
-  BASE_URL: __DEV__
-    ? "http://localhost:3000"
-    : "https://marketplace-backend-blush.vercel.app/",
+  BASE_URL: "https://marketplace-backend-blush.vercel.app",
   TIMEOUT: 10000,
 };
 
