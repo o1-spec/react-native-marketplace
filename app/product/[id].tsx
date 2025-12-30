@@ -493,13 +493,19 @@ export default function ProductDetailScreen() {
         <SlideInView direction="up" delay={250}>
           <TouchableOpacity
             style={styles.sellerContainer}
-            onPress={() => router.push(`/user/${product?.sellerId?._id}`)}
+            onPress={() => {
+              const sellerId = product?.seller?._id || product?.seller?.id;
+              console.log("🧑 Seller clicked, ID:", sellerId);
+              if (sellerId) {
+                router.push(`/user/${sellerId}`);
+              }
+            }}
           >
             <View style={styles.sellerLeft}>
               <Image
                 source={{
                   uri:
-                    product?.sellerId?.avatar ||
+                    product?.seller?.avatar ||
                     "https://i.pravatar.cc/300?img=47",
                 }}
                 style={styles.sellerAvatar}
@@ -507,9 +513,9 @@ export default function ProductDetailScreen() {
               <View style={styles.sellerInfo}>
                 <View style={styles.sellerNameRow}>
                   <Text style={styles.sellerName}>
-                    {product?.sellerId?.name}
+                    {product?.seller?.name || "Unknown Seller"}
                   </Text>
-                  {product?.sellerId?.emailVerified && (
+                  {product?.seller?.emailVerified && (
                     <Ionicons
                       name="checkmark-circle"
                       size={16}
@@ -520,12 +526,12 @@ export default function ProductDetailScreen() {
                 <View style={styles.sellerMeta}>
                   <Ionicons name="star" size={14} color="#FFB84D" />
                   <Text style={styles.sellerRatingText}>
-                    {product?.sellerId?.rating?.toFixed(1) || 0} (
-                    {product?.sellerId?.totalReviews || 0})
+                    {product?.seller?.rating?.toFixed(1) || 0} (
+                    {product?.seller?.totalReviews || 0})
                   </Text>
                 </View>
                 <Text style={styles.responseTime}>
-                  Responds in {product?.sellerId?.responseTime || "~1 hour"}
+                  Responds in {product?.seller?.responseTime || "~1 hour"}
                 </Text>
               </View>
             </View>

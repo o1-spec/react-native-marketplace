@@ -89,6 +89,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
+  // In AuthContext.tsx
   const checkAuthState = async () => {
     if (hasCheckedAuth.current) {
       return;
@@ -98,6 +99,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const storedToken = await AsyncStorage.getItem("token");
       if (storedToken) {
+        setToken(storedToken);
         const profileData = await userAPI.getProfile();
         const currentUser = profileData.user;
 
@@ -108,18 +110,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
-        setToken(storedToken);
         setUser(currentUser);
-      } else {
       }
     } catch (error) {
+      console.error("Auth check failed:", error);
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("user");
     } finally {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     checkAuthState();
   }, []);

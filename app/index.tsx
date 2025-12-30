@@ -68,14 +68,21 @@ export default function WelcomeScreen() {
       </View>
     );
   }
-  // useEffect(() => {
-  //   if (isAuthenticated) {
-  //     console.log("✅ User authenticated, redirecting to tabs");
-  //     router.replace("/(tabs)");
-  //   }
-  // }, [isAuthenticated]);
+
   const handleGetStarted = () => {
-    router.push("/(auth)/register");
+    if (isAuthenticated) {
+      router.replace("/(tabs)");
+    } else {
+      router.push("/(auth)/register");
+    }
+  };
+
+  const handleHaveAccount = () => {
+    if (isAuthenticated) {
+      router.replace("/(tabs)");
+    } else {
+      router.push("/(auth)/login");
+    }
   };
 
   const handleClearStorage = () => {
@@ -181,7 +188,7 @@ export default function WelcomeScreen() {
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => router.push("/(auth)/login")}
+          onPress={handleHaveAccount}
           activeOpacity={0.7}
         >
           <Text style={styles.secondaryButtonText}>I have an account</Text>

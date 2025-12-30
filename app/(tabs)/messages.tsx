@@ -58,24 +58,25 @@ export default function MessagesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
 
-  const loadConversations = async () => {
-    if (!token) return;
+const loadConversations = async () => {
+  console.log("Loading conversations, token:", !!token); 
 
-    try {
-      const response = await conversationsAPI.getConversations();
-      setConversations(response.conversations || []);
-    } catch (error: any) {
-      console.error("Error loading conversations:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.message || 'Failed to load conversations',
-      });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  try {
+    const response = await conversationsAPI.getConversations();
+    console.log("Conversations loaded:", response.conversations?.length); // Debug log
+    setConversations(response.conversations || []);
+  } catch (error: any) {
+    console.error("Error loading conversations:", error);
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: error.message || 'Failed to load conversations',
+    });
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   useEffect(() => {
     loadConversations();
