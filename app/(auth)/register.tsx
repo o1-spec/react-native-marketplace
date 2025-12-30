@@ -26,6 +26,7 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showVerificationButton, setShowVerificationButton] = useState(false);
 
   const handleRegister = async () => {
     setIsSubmitting(true);
@@ -65,16 +66,35 @@ export default function RegisterScreen() {
 
       router.push("/(auth)/verify-email");
     } catch (err) {
-      setError(
+      const errorMessage =
         err instanceof Error
           ? err.message
-          : "Registration failed. Please try again."
-      );
-      Toast.show({
-        type: "error",
-        text1: "Registration Failed",
-        text2: err instanceof Error ? err.message : "Please try again.",
-      });
+          : "Registration failed. Please try again.";
+
+      const isNetworkError =
+        errorMessage.toLowerCase().includes("timeout") ||
+        errorMessage.toLowerCase().includes("network") ||
+        errorMessage.toLowerCase().includes("fetch");
+
+      if (isNetworkError) {
+        setError(
+          "Request timed out, but registration may have succeeded. Please check your email for verification or try verifying below."
+        );
+        Toast.show({
+          type: "warning",
+          text1: "Request Timeout",
+          text2: "Check your email for verification code.",
+        });
+
+        setShowVerificationButton(true);
+      } else {
+        setError(errorMessage);
+        Toast.show({
+          type: "error",
+          text1: "Registration Failed",
+          text2: errorMessage,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -222,7 +242,19 @@ export default function RegisterScreen() {
           {error && (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
-              <Text style={styles.errorText}>{error}</Text>
+              <View style={styles.errorContent}>
+                <Text style={styles.errorText}>{error}</Text>
+                {showVerificationButton && (
+                  <TouchableOpacity
+                    style={styles.verificationButton}
+                    onPress={() => router.push("/(auth)/verify-email")}
+                  >
+                    <Text style={styles.verificationButtonText}>
+                      Go to Email Verification
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           )}
 
@@ -453,5 +485,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#C53030",
     lineHeight: 20,
+  },
+  errorContent: {
+    flex: 1,
+  },
+  verificationButton: {
+    backgroundColor: "#4ECDC4",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 12,
+    alignSelf: "flex-start",
+  },
+  verificationButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
