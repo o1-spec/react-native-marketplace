@@ -63,24 +63,29 @@ const handleLogout = async () => {
       style: "destructive",
       onPress: async () => {
         try {
-          await authAPI.logout();
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('user');
+
+          try {
+            await authAPI.logout();
+          } catch (error) {
+            console.log('Logout API failed (non-blocking):', error);
+          }
+
           Toast.show({
             type: "success",
             text1: "Logged out successfully",
           });
+
+          router.replace("/(auth)/login");
         } catch (error: any) {
+          console.error('Logout error:', error);
           Toast.show({
             type: "error",
-            text1: "Failed to logout",
-            text2: error.message || "Please try again later",
+            text1: "Logout failed",
+            text2: error.message || "Please try again",
           });
-          console.error('Logout API error:', error);
         }
-
-        await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('user');
-
-        router.replace("/(auth)/login");
       },
     },
   ]);

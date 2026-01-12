@@ -1,9 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_CONFIG = {
-  BASE_URL: __DEV__
-    ? "http://localhost:3000"
-    : "https://marketplace-backend-blush.vercel.app", 
+  BASE_URL: "https://marketplace-backend-blush.vercel.app",
   TIMEOUT: 10000,
 };
 
@@ -75,11 +73,21 @@ export const apiRequest = async (
 ): Promise<any> => {
   const token = await AsyncStorage.getItem("token");
 
+  // // ✅ Add debug logging
+  // console.log("🔍 API Request:", {
+  //   endpoint,
+  //   hasToken: !!token,
+  //   tokenPreview: token ? `${token.substring(0, 20)}...` : "no token",
+  // });
+
   const headers = {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
   };
   const url = buildUrl(endpoint);
+
+  // console.log("🔗 Request URL:", url);
+  // console.log("📋 Request Headers:", headers);
 
   const config: RequestInit = {
     ...options,
@@ -100,13 +108,23 @@ export const apiRequest = async (
 
     clearTimeout(timeoutId);
 
+    // console.log("📡 Response Status:", response.status);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("❌ API Error:", errorData);
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    // console.log("✅ API Success:", endpoint);
+    return data;
   } catch (error) {
+    // console.error("🚨 API Request Failed:", {
+    //   endpoint,
+    //   error: error instanceof Error ? error.message : "Unknown error",
+    // });
+    
     if (error instanceof Error) {
       if (error.name === "AbortError") {
         throw new Error("Request timeout");
