@@ -243,17 +243,34 @@ export const notificationsAPI = {
     apiRequest(API_ENDPOINTS.NOTIFICATIONS_CLEAR_ALL, {
       method: "DELETE",
     }),
+  
+  // ❌ WRONG - Using string literal instead of variable
+  // markAsRead: (id: string) =>
+  //   apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}/read`, {
+  //     method: "PUT",
+  //   }),
+
+  // ✅ CORRECT - Use template literal properly
   markAsRead: (id: string) =>
-    apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}/read`, {
+    apiRequest(`${API_ENDPOINTS.NOTIFICATIONS}/${id}/read`, {
       method: "PUT",
     }),
 
+  // ❌ WRONG
+  // deleteNotification: (id: string) =>
+  //   apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}`, {
+  //     method: "DELETE",
+  //   }),
+
+  // ✅ CORRECT
   deleteNotification: (id: string) =>
-    apiRequest(`API_ENDPOINTS.NOTIFICATIONS/${id}`, {
+    apiRequest(`${API_ENDPOINTS.NOTIFICATIONS}/${id}`, {
       method: "DELETE",
     }),
+    
   getUnreadCount: () => apiRequest("/api/notifications/unread-count"),
 };
+
 
 export const productsAPI = {
   getProducts: (params?: any) => {

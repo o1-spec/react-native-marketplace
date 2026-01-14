@@ -168,7 +168,7 @@ export default function NotificationsScreen() {
           router.push(`/user/${notification.actionId}`);
           break;
         case "system":
-          Alert.alert(notification.title, notification.message);
+          // Alert.alert(notification.title, notification.message);
           break;
       }
     }
