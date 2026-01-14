@@ -30,10 +30,21 @@ export default function VerifyEmailScreen() {
   useEffect(() => {
     const loadUserEmail = async () => {
       try {
+        const pendingEmail = await AsyncStorage.getItem("pendingEmail");
+
+        if (pendingEmail) {
+          console.log("✅ Found pending email:", pendingEmail);
+          setUserEmail(pendingEmail);
+          return;
+        }
+
         const userData = await AsyncStorage.getItem("user");
         if (userData) {
           const user = JSON.parse(userData);
+          console.log("✅ Found user email:", user.email);
           setUserEmail(user.email);
+        } else {
+          console.warn("⚠️ No user data found");
         }
       } catch (error) {
         console.error("Error loading user email:", error);
@@ -88,22 +99,34 @@ export default function VerifyEmailScreen() {
     try {
       const codeToVerify = verificationCode || code.join("");
 
+      console.log("📧 Verifying email with code:", codeToVerify);
       const data = await authAPI.verifyEmail({
         email: userEmail,
         code: codeToVerify,
       });
+
       if (data.user) {
+        console.log("👤 Storing verified user data...");
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
       }
 
-      if (data.tempToken) {
-        await AsyncStorage.setItem("token", data.tempToken);
+      const tokenToStore = data.token || data.tempToken;
+      if (tokenToStore) {
+        console.log("🔑 Storing temporary token from verification...");
+        await AsyncStorage.setItem("token", tokenToStore);
+
+        const storedToken = await AsyncStorage.getItem("token");
+        console.log("✅ Token stored successfully:", !!storedToken);
       }
+
+      await AsyncStorage.removeItem("pendingEmail");
+
       Toast.show({
         type: "success",
         text1: "Email Verified!",
         text2: "Your email has been successfully verified.",
       });
+
       router.replace("/(auth)/complete-profile");
     } catch (err) {
       setError(
@@ -114,7 +137,10 @@ export default function VerifyEmailScreen() {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: err instanceof Error ? err.message : "Verification failed. Please try again.",
+        text2:
+          err instanceof Error
+            ? err.message
+            : "Verification failed. Please try again.",
       });
     } finally {
       setIsVerifying(false);
@@ -152,7 +178,10 @@ export default function VerifyEmailScreen() {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: err instanceof Error ? err.message : "Failed to resend code. Please try again.",
+        text2:
+          err instanceof Error
+            ? err.message
+            : "Failed to resend code. Please try again.",
       });
     } finally {
       setIsResending(false);

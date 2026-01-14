@@ -25,12 +25,14 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
-  const [showVerificationButton, setShowVerificationButton] = useState(false);
+  const [showVerificationButtons, setShowVerificationButtons] = useState(false);
 
   const handleRegister = async () => {
     setIsSubmitting(true);
     setError("");
+    setShowVerificationButtons(false);
 
     try {
       if (name.length < 2) {
@@ -53,11 +55,8 @@ export default function RegisterScreen() {
       });
 
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
+      await AsyncStorage.setItem("pendingEmail", email);
 
-      // if (data.token) {
-      //   await AsyncStorage.setItem("token", data.token);
-      //   await AsyncStorage.setItem("user", JSON.stringify(data.user));
-      // }
       Toast.show({
         type: "success",
         text1: "Registration Successful!",
@@ -77,16 +76,22 @@ export default function RegisterScreen() {
         errorMessage.toLowerCase().includes("fetch");
 
       if (isNetworkError) {
+        await AsyncStorage.setItem("pendingEmail", email);
+        await AsyncStorage.setItem(
+          "user",
+          JSON.stringify({ name, email, emailVerified: false })
+        );
+
         setError(
-          "Request timed out, but registration may have succeeded. Please check your email for verification or try verifying below."
+          "Request timed out, but registration may have succeeded. Please check your email for verification or resend the code."
         );
         Toast.show({
           type: "warning",
           text1: "Request Timeout",
-          text2: "Check your email for verification code.",
+          text2: "Check your email or resend verification code.",
         });
 
-        setShowVerificationButton(true);
+        setShowVerificationButtons(true);
       } else {
         setError(errorMessage);
         Toast.show({
@@ -97,6 +102,36 @@ export default function RegisterScreen() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    setError("");
+
+    try {
+      await authAPI.resendVerification({ email });
+
+      Toast.show({
+        type: "success",
+        text1: "Email Sent!",
+        text2: "Please check your inbox for the verification code.",
+      });
+
+      router.push("/(auth)/verify-email");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to resend email. Please try again.";
+
+      Toast.show({
+        type: "error",
+        text1: "Resend Failed",
+        text2: errorMessage,
+      });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -239,20 +274,34 @@ export default function RegisterScreen() {
             </View>
           </View>
 
+          {/* ✅ Error with Both Action Buttons */}
           {error && (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
               <View style={styles.errorContent}>
                 <Text style={styles.errorText}>{error}</Text>
-                {showVerificationButton && (
-                  <TouchableOpacity
-                    style={styles.verificationButton}
-                    onPress={() => router.push("/(auth)/verify-email")}
-                  >
-                    <Text style={styles.verificationButtonText}>
-                      Go to Email Verification
-                    </Text>
-                  </TouchableOpacity>
+                {showVerificationButtons && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.resendButton}
+                      onPress={handleResendVerification}
+                      disabled={isResending}
+                    >
+                      <Ionicons name="mail" size={16} color="#fff" />
+                      <Text style={styles.resendButtonText}>
+                        {isResending ? "Sending..." : "Resend Email"}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.verificationButton}
+                      onPress={() => router.push("/(auth)/verify-email")}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                      <Text style={styles.verificationButtonText}>
+                        Verify Now
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             </View>
@@ -434,44 +483,12 @@ const styles = StyleSheet.create({
     color: "#2D3436",
     fontWeight: "600",
   },
-  registerButton: {
-    backgroundColor: "#2D3436",
-    flexDirection: "row",
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#2D3436",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    marginBottom: 20,
-    gap: 10,
-  },
-  registerButtonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  loginContainer: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  loginText: {
-    fontSize: 15,
-    color: "#636E72",
-  },
-  loginLink: {
-    color: "#2D3436",
-    fontWeight: "600",
-  },
   buttonSpacing: {
     marginBottom: 16,
   },
   errorContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     backgroundColor: "#FFF5F5",
     borderRadius: 12,
     padding: 16,
@@ -480,22 +497,45 @@ const styles = StyleSheet.create({
     borderColor: "#FEB2B2",
     gap: 12,
   },
-  errorText: {
-    flex: 1,
-    fontSize: 14,
-    color: "#C53030",
-    lineHeight: 20,
-  },
   errorContent: {
     flex: 1,
   },
-  verificationButton: {
+  errorText: {
+    fontSize: 14,
+    color: "#C53030",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  resendButton: {
+    flex: 1,
+    flexDirection: "row",
     backgroundColor: "#4ECDC4",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginTop: 12,
-    alignSelf: "flex-start",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  resendButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  verificationButton: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "#FF6B6B",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
   verificationButtonText: {
     color: "#fff",
