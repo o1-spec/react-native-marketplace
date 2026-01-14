@@ -73,7 +73,7 @@ export const apiRequest = async (
 ): Promise<any> => {
   const token = await AsyncStorage.getItem("token");
 
-  // // ✅ Add debug logging
+  // ✅ UNCOMMENT ALL THESE
   // console.log("🔍 API Request:", {
   //   endpoint,
   //   hasToken: !!token,
@@ -101,6 +101,8 @@ export const apiRequest = async (
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
 
+    // console.log("📤 Making request to:", url);
+    
     const response = await fetch(url, {
       ...config,
       signal: controller.signal,
@@ -113,6 +115,7 @@ export const apiRequest = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error("❌ API Error:", errorData);
+      console.error("❌ Response headers:", response.headers);
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
@@ -120,10 +123,11 @@ export const apiRequest = async (
     // console.log("✅ API Success:", endpoint);
     return data;
   } catch (error) {
-    // console.error("🚨 API Request Failed:", {
-    //   endpoint,
-    //   error: error instanceof Error ? error.message : "Unknown error",
-    // });
+    console.error("🚨 API Request Failed:", {
+      endpoint,
+      url,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     
     if (error instanceof Error) {
       if (error.name === "AbortError") {

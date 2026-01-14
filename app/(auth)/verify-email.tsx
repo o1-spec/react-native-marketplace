@@ -1,4 +1,5 @@
 import AnimatedButton from "@/components/AnimatedButton";
+import { useAuth } from "@/contexts/AuthContext";
 import { authAPI } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,6 +19,7 @@ import Toast from "react-native-toast-message";
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
+  const { reloadAuth } = useAuth();
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
@@ -33,7 +35,7 @@ export default function VerifyEmailScreen() {
         const pendingEmail = await AsyncStorage.getItem("pendingEmail");
 
         if (pendingEmail) {
-          console.log("✅ Found pending email:", pendingEmail);
+          // console.log("✅ Found pending email:", pendingEmail);
           setUserEmail(pendingEmail);
           return;
         }
@@ -41,7 +43,7 @@ export default function VerifyEmailScreen() {
         const userData = await AsyncStorage.getItem("user");
         if (userData) {
           const user = JSON.parse(userData);
-          console.log("✅ Found user email:", user.email);
+          // console.log("✅ Found user email:", user.email);
           setUserEmail(user.email);
         } else {
           console.warn("⚠️ No user data found");
@@ -99,27 +101,30 @@ export default function VerifyEmailScreen() {
     try {
       const codeToVerify = verificationCode || code.join("");
 
-      console.log("📧 Verifying email with code:", codeToVerify);
+      // console.log("📧 Verifying email with code:", codeToVerify);
       const data = await authAPI.verifyEmail({
         email: userEmail,
         code: codeToVerify,
       });
 
       if (data.user) {
-        console.log("👤 Storing verified user data...");
+        // console.log("👤 Storing verified user data...");
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
       }
 
       const tokenToStore = data.token || data.tempToken;
       if (tokenToStore) {
-        console.log("🔑 Storing temporary token from verification...");
+        // console.log("🔑 Storing temporary token from verification...");
         await AsyncStorage.setItem("token", tokenToStore);
 
         const storedToken = await AsyncStorage.getItem("token");
-        console.log("✅ Token stored successfully:", !!storedToken);
+        // console.log("✅ Token stored successfully:", !!storedToken);
       }
 
       await AsyncStorage.removeItem("pendingEmail");
+      // console.log("🔄 Reloading auth context...");
+      await reloadAuth();
+      // console.log("✅ Auth context reloaded");
 
       Toast.show({
         type: "success",
@@ -129,6 +134,7 @@ export default function VerifyEmailScreen() {
 
       router.replace("/(auth)/complete-profile");
     } catch (err) {
+      console.error("❌ Verification error:", err);
       setError(
         err instanceof Error
           ? err.message

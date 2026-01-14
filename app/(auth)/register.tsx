@@ -86,7 +86,7 @@ export default function RegisterScreen() {
           "Request timed out, but registration may have succeeded. Please check your email for verification or resend the code."
         );
         Toast.show({
-          type: "warning",
+          type: "error",
           text1: "Request Timeout",
           text2: "Check your email or resend verification code.",
         });
