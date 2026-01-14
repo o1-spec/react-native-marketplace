@@ -90,68 +90,63 @@ export default function VerifyEmailScreen() {
   };
 
   const handleVerify = async (verificationCode?: string) => {
-    if (!userEmail) {
-      setError("User email not found. Please try logging in again.");
-      return;
+  if (!userEmail) {
+    setError("User email not found. Please try logging in again.");
+    return;
+  }
+
+  setIsVerifying(true);
+  setError("");
+
+  try {
+    const codeToVerify = verificationCode || code.join("");
+
+    const data = await authAPI.verifyEmail({
+      email: userEmail,
+      code: codeToVerify,
+    });
+
+    if (data.user) {
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
     }
 
-    setIsVerifying(true);
-    setError("");
+    const tokenToStore = data.token || data.tempToken;
+    if (tokenToStore) {
+      await AsyncStorage.setItem("token", tokenToStore);
+    }
 
-    try {
-      const codeToVerify = verificationCode || code.join("");
+    await AsyncStorage.removeItem("pendingEmail");
+    
+    // ❌ REMOVE THIS - It's causing early navigation
+    // await reloadAuth();
 
-      // console.log("📧 Verifying email with code:", codeToVerify);
-      const data = await authAPI.verifyEmail({
-        email: userEmail,
-        code: codeToVerify,
-      });
+    Toast.show({
+      type: "success",
+      text1: "Email Verified!",
+      text2: "Your email has been successfully verified.",
+    });
 
-      if (data.user) {
-        // console.log("👤 Storing verified user data...");
-        await AsyncStorage.setItem("user", JSON.stringify(data.user));
-      }
-
-      const tokenToStore = data.token || data.tempToken;
-      if (tokenToStore) {
-        // console.log("🔑 Storing temporary token from verification...");
-        await AsyncStorage.setItem("token", tokenToStore);
-
-        const storedToken = await AsyncStorage.getItem("token");
-        // console.log("✅ Token stored successfully:", !!storedToken);
-      }
-
-      await AsyncStorage.removeItem("pendingEmail");
-      // console.log("🔄 Reloading auth context...");
-      await reloadAuth();
-      // console.log("✅ Auth context reloaded");
-
-      Toast.show({
-        type: "success",
-        text1: "Email Verified!",
-        text2: "Your email has been successfully verified.",
-      });
-
-      router.replace("/(auth)/complete-profile");
-    } catch (err) {
-      console.error("❌ Verification error:", err);
-      setError(
+    // ✅ Navigate directly to complete-profile
+    router.replace("/(auth)/complete-profile");
+  } catch (err) {
+    console.error("❌ Verification error:", err);
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Verification failed. Please try again."
+    );
+    Toast.show({
+      type: "error",
+      text1: "Error",
+      text2:
         err instanceof Error
           ? err.message
-          : "Verification failed. Please try again."
-      );
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2:
-          err instanceof Error
-            ? err.message
-            : "Verification failed. Please try again.",
-      });
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+          : "Verification failed. Please try again.",
+    });
+  } finally {
+    setIsVerifying(false);
+  }
+};
 
   const handleResend = async () => {
     if (!userEmail) {
